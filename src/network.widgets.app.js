@@ -27,6 +27,7 @@ var inventoryToolbox = require('./inventory.toolbox.directive.js');
 var inventoryToolboxClipPath = require('./inventory.toolbox.clip.path.directive.js');
 var statusLight = require('./status.light.directive.js');
 var taskStatus = require('./task.status.directive.js');
+var fsm = require('./fsm.directive.js');
 var debug = require('./debug.directive.js');
 var awxNetworkWidgets = require('./network.widgets.directive.js');
 
@@ -61,6 +62,7 @@ var networkWidgets = angular.module('networkWidgets', [
     .directive('awxNetInventoryToolboxClipPath', inventoryToolboxClipPath.inventoryToolboxClipPath)
     .directive('awxNetStatusLight', statusLight.statusLight)
     .directive('awxNetTaskStatus', taskStatus.taskStatus)
+    .directive('msaFsm', fsm.fsm)
     .directive('awxNetworkWidgets', awxNetworkWidgets.awxNetworkWidgets);
 
 exports.networkWidgets = networkWidgets;

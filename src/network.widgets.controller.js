@@ -145,6 +145,8 @@ var NetworkWidgetsController = function($scope, $document, $location, $window) {
   $scope.inventory_toolbox.items.push(new models.Device(0, 'Router14', 0, 0, 'router'));
   $scope.inventory_toolbox.items.push(new models.Device(0, 'Router15', 0, 0, 'router'));
   $scope.inventory_toolbox.items.push(new models.Device(0, 'Router16', 0, 0, 'router'));
+  $scope.inventory_toolbox.items.push(new models.Device(0, 'FSM1', 0, 0, 'fsm'));
+  $scope.inventory_toolbox.items.push(new models.Device(0, 'FSM2', 0, 0, 'fsm'));
   $scope.inventory_toolbox.spacing = 150;
   $scope.inventory_toolbox.enabled = true;
   $scope.inventory_toolbox_controller.toolbox = $scope.inventory_toolbox;
@@ -259,6 +261,8 @@ var NetworkWidgetsController = function($scope, $document, $location, $window) {
       ["InterfaceCreate", {"msg_type":"InterfaceCreate","sender":0,"device_id":26,"id":1,"name":"eth1","message_id":mids()}],
       ["LinkCreate", {"msg_type":"LinkCreate","id":lids(),"sender":0,"name":"","from_device_id":17,"to_device_id":26,"from_interface_id":1,"to_interface_id":1,"message_id":mids()}],
       ["GroupCreate",{"msg_type":"GroupCreate","sender":0,"ids":gids(),"x1":0,"y1":2800,"x2":1000,"y2":3000,"name":"Site2",type:"site", "message_id":mids()}],
+      ["DeviceCreate",{"msg_type":"DeviceCreate","sender":0,"id":dids(),"x":100,"y":3500,"name":"FSM3","type":"fsm","message_id":mids()}],
+      ["DeviceCreate",{"msg_type":"DeviceCreate","sender":0,"id":dids(),"x":100,"y":3600,"name":"FSM4","type":"fsm","message_id":mids()}],
   ];
 
     var getMouseEventResult = function (mouseEvent) {

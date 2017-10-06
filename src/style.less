@@ -19,6 +19,7 @@
 @light-background: #ffffff;
 @light-widget-detail: #ffffff;
 @dark-widget-detail: #707070;
+@medium-widget-detail: #D7D7D7;
 @widget-body: #D7D7D7;
 @link: #D7D7D7;
 @group: #707070;
@@ -693,5 +694,56 @@
 .NetworkUI__stream-text {
     fill: @button-text;
     font-size: 8px;
+    font-family: 'Open Sans';
+}
+
+.NetworkUI__fsm {
+    fill: @widget-body;
+    stroke: @dark-widget-detail;
+    stroke-width: 2;
+}
+
+.NetworkUI__fsm--selected {
+    stroke: @selected-blue;
+    stroke-width: 4;
+}
+
+.NetworkUI__fsm--remote-selected {
+    stroke: @selected-mango;
+    stroke-width: 4;
+}
+
+.NetworkUI__fsm--selected-conflict {
+    stroke: @selected-red;
+    stroke-width: 4;
+}
+
+.NetworkUI__fsm line {
+    stroke: @light-widget-detail;
+    stroke-width: 20;
+}
+
+.NetworkUI__fsm-state {
+    fill: @light-widget-detail;
+    stroke: none;
+}
+
+.NetworkUI__fsm-transition {
+    fill: none;
+    stroke: @light-widget-detail;
+}
+
+.NetworkUI__fsm-arrow {
+    fill: @light-widget-detail;
+    stroke: @light-widget-detail;
+}
+
+.NetworkUI__fsm-text {
+    fill: @button-text;
+    font-family: 'Open Sans';
+}
+
+
+.NetworkUI__fsm-text--selected {
     font-family: 'Open Sans';
 }
