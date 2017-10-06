@@ -4,7 +4,6 @@
  * License: MIT
  */
 
-"use strict";
 
 
 angular.module("ngTouch", [])
