@@ -249,9 +249,9 @@ var NetworkUIController = function($scope,
 
   //App Toolbox Setup
   // const toolboxTopMargin = 115;
-  var toolboxTopMargin = $('.Networking-top').height();
+  var toolboxTopMargin = 0; //$('.Networking-top').height();
   var toolboxTitleMargin = toolboxTopMargin + 35;
-  var toolboxHeight = $scope.graph.height - $('.Networking-top').height();
+  var toolboxHeight = $scope.graph.height - toolboxTopMargin;
   $scope.app_toolbox = new models.ToolBox(0, 'Process', 'app', 0, toolboxTopMargin, 200, toolboxHeight);
   $scope.app_toolbox.title_coordinates = {x: 70, y: toolboxTitleMargin};
   $scope.app_toolbox.spacing = 150;
@@ -603,10 +603,10 @@ var NetworkUIController = function($scope,
     // Event Handlers
 
     $scope.normalize_mouse_event = function ($event) {
-        if ($event.pageX !== undefined) {
+        if ($event.pageX !== undefined && $event.x === undefined) {
             $event.x = $event.pageX;
         }
-        if ($event.pageY !== undefined) {
+        if ($event.pageY !== undefined && $event.y === undefined) {
             $event.y = $event.pageY;
         }
         if ($event.originalEvent !== undefined) {
@@ -2084,7 +2084,7 @@ var NetworkUIController = function($scope,
     });
 
     $scope.update_toolbox_heights = function(){
-        toolboxTopMargin = $('.Networking-top').height();
+        toolboxTopMargin = 0;
         toolboxTitleMargin = toolboxTopMargin + 35;
         toolboxHeight = $scope.graph.height - toolboxTopMargin;
 
@@ -2100,8 +2100,8 @@ var NetworkUIController = function($scope,
             icon.y = actionIconVerticalOffset;
         });
 
-        $('.Networking-detailPanel').height(toolboxHeight);
-        $('.Networking-detailPanel').css('top', toolboxTopMargin);
+        //$('.Networking-detailPanel').height(toolboxHeight);
+        //$('.Networking-detailPanel').css('top', toolboxTopMargin);
     };
 
     $scope.update_size = function () {

@@ -30,11 +30,10 @@ exports.Expanded = Expanded;
 
 
 
-_Start.prototype.start = function (controller, msg_type, $event) {
+_Start.prototype.start = function (controller) {
 
-    controller.scope.$parent.vm.rightPanelIsExpanded = false;
+    //controller.scope.$parent.vm.rightPanelIsExpanded = false;
     controller.changeState(Collapsed);
-    controller.handle_message(msg_type, $event);
 
 };
 _Start.prototype.start.transitions = ['Collapsed'];
