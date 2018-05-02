@@ -743,7 +743,56 @@
     font-family: 'Open Sans';
 }
 
-
 .NetworkUI__fsm-text--selected {
+    font-family: 'Open Sans';
+}
+
+.NetworkUI__queue {
+    fill: @widget-body;
+    stroke: @dark-widget-detail;
+    stroke-width: 2;
+}
+
+.NetworkUI__queue--selected {
+    stroke: @selected-blue;
+    stroke-width: 4;
+}
+
+.NetworkUI__queue--remote-selected {
+    stroke: @selected-mango;
+    stroke-width: 4;
+}
+
+.NetworkUI__queue--selected-conflict {
+    stroke: @selected-red;
+    stroke-width: 4;
+}
+
+.NetworkUI__queue line {
+    stroke: @light-widget-detail;
+    stroke-width: 5;
+}
+
+.NetworkUI__queue-state {
+    fill: @light-widget-detail;
+    stroke: none;
+}
+
+.NetworkUI__queue-transition {
+    fill: none;
+    stroke: @light-widget-detail;
+}
+
+.NetworkUI__queue-arrow {
+    fill: @light-widget-detail;
+    stroke: @light-widget-detail;
+}
+
+.NetworkUI__queue-text {
+    fill: @button-text;
+    font-family: 'Open Sans';
+}
+
+.NetworkUI__queue-text--selected {
     font-family: 'Open Sans';
 }

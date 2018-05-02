@@ -1,5 +1,8 @@
+/* Copyright (c) 2017 Red Hat, Inc. */
+
+const templateUrl = require('~network-ui/router.partial.svg');
 
 function router () {
-  return { restrict: 'A', templateUrl: '/static/network_ui/widgets/router.html' };
+  return { restrict: 'A', templateUrl};
 }
 exports.router = router;

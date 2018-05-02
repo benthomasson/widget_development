@@ -1,3 +1,4 @@
+/* Copyright (c) 2017 Red Hat, Inc. */
 
 
 function serialize(message) {
@@ -16,7 +17,23 @@ function DeviceMove(sender, id, x, y, previous_x, previous_y) {
 }
 exports.DeviceMove = DeviceMove;
 
-function DeviceCreate(sender, id, x, y, name, type) {
+function DeviceInventoryUpdate(sender, id, host_id) {
+    this.msg_type = "DeviceInventoryUpdate";
+    this.sender = sender;
+    this.id = id;
+    this.host_id = host_id;
+}
+exports.DeviceInventoryUpdate = DeviceInventoryUpdate;
+
+function GroupInventoryUpdate(sender, id, group_id) {
+    this.msg_type = "GroupInventoryUpdate";
+    this.sender = sender;
+    this.id = id;
+    this.group_id = group_id;
+}
+exports.GroupInventoryUpdate = GroupInventoryUpdate;
+
+function DeviceCreate(sender, id, x, y, name, type, host_id) {
     this.msg_type = "DeviceCreate";
     this.sender = sender;
     this.id = id;
@@ -24,10 +41,11 @@ function DeviceCreate(sender, id, x, y, name, type) {
     this.y = y;
     this.name = name;
     this.type = type;
+    this.host_id = host_id;
 }
 exports.DeviceCreate = DeviceCreate;
 
-function DeviceDestroy(sender, id, previous_x, previous_y, previous_name, previous_type) {
+function DeviceDestroy(sender, id, previous_x, previous_y, previous_name, previous_type, previous_host_id) {
     this.msg_type = "DeviceDestroy";
     this.sender = sender;
     this.id = id;
@@ -35,6 +53,7 @@ function DeviceDestroy(sender, id, previous_x, previous_y, previous_name, previo
     this.previous_y = previous_y;
     this.previous_name = previous_name;
     this.previous_type = previous_type;
+    this.previous_host_id = previous_host_id;
 }
 exports.DeviceDestroy = DeviceDestroy;
 
@@ -173,23 +192,18 @@ function MultipleMessage(sender, messages) {
 }
 exports.MultipleMessage = MultipleMessage;
 
-function Coverage(sender, coverage) {
-    this.msg_type = "Coverage";
-    this.sender = sender;
-    this.coverage = coverage;
-}
-exports.Coverage = Coverage;
 
-function MouseEvent(sender, x, y, type) {
+function MouseEvent(sender, x, y, type, trace_id) {
     this.msg_type = "MouseEvent";
     this.sender = sender;
     this.x = x;
     this.y = y;
     this.type = type;
+    this.trace_id = trace_id;
 }
 exports.MouseEvent = MouseEvent;
 
-function MouseWheelEvent(sender, delta, deltaX, deltaY, type, metaKey) {
+function MouseWheelEvent(sender, delta, deltaX, deltaY, type, metaKey, trace_id) {
     this.msg_type = "MouseWheelEvent";
     this.sender = sender;
     this.delta = delta;
@@ -197,10 +211,11 @@ function MouseWheelEvent(sender, delta, deltaX, deltaY, type, metaKey) {
     this.deltaY = deltaY;
     this.type = type;
     this.originalEvent = {metaKey: metaKey};
+    this.trace_id = trace_id;
 }
 exports.MouseWheelEvent = MouseWheelEvent;
 
-function KeyEvent(sender, key, keyCode, type, altKey, shiftKey, ctrlKey, metaKey) {
+function KeyEvent(sender, key, keyCode, type, altKey, shiftKey, ctrlKey, metaKey, trace_id) {
     this.msg_type = "KeyEvent";
     this.sender = sender;
     this.key = key;
@@ -210,35 +225,31 @@ function KeyEvent(sender, key, keyCode, type, altKey, shiftKey, ctrlKey, metaKey
     this.shiftKey = shiftKey;
     this.ctrlKey = ctrlKey;
     this.metaKey = metaKey;
+    this.trace_id = trace_id;
 }
 exports.KeyEvent = KeyEvent;
 
-function TouchEvent(sender, type, touches) {
-    this.msg_type = "TouchEvent";
-    this.sender = sender;
-    this.type = type;
-    this.touches = touches;
-}
-exports.TouchEvent = TouchEvent;
-
-function StartRecording(sender) {
+function StartRecording(sender, trace_id) {
     this.msg_type = "StartRecording";
     this.sender = sender;
+    this.trace_id = trace_id;
 }
 exports.StartRecording = StartRecording;
 
-function StopRecording(sender) {
+function StopRecording(sender, trace_id) {
     this.msg_type = "StopRecording";
     this.sender = sender;
+    this.trace_id = trace_id;
 }
 exports.StopRecording = StopRecording;
 
-function ViewPort(sender, scale, panX, panY) {
+function ViewPort(sender, scale, panX, panY, trace_id) {
     this.msg_type = "ViewPort";
     this.sender = sender;
     this.scale = scale;
     this.panX = panX;
     this.panY = panY;
+    this.trace_id = trace_id;
 }
 exports.ViewPort = ViewPort;
 
@@ -262,11 +273,6 @@ function NewGroup(type) {
     this.type = type;
 }
 exports.NewGroup = NewGroup;
-
-function PasteGroup(group) {
-    this.group = group;
-}
-exports.PasteGroup = PasteGroup;
 
 function PasteRack(group) {
     this.group = group;
@@ -300,7 +306,7 @@ function GroupMove(sender, id, x1, y1, x2, y2, previous_x1, previous_y1, previou
 }
 exports.GroupMove = GroupMove;
 
-function GroupCreate(sender, id, x1, y1, x2, y2, name, type) {
+function GroupCreate(sender, id, x1, y1, x2, y2, name, type, group_id) {
     this.msg_type = "GroupCreate";
     this.sender = sender;
     this.id = id;
@@ -310,10 +316,11 @@ function GroupCreate(sender, id, x1, y1, x2, y2, name, type) {
     this.y2 = y2;
     this.name = name;
     this.type = type;
+    this.group_id = group_id;
 }
 exports.GroupCreate = GroupCreate;
 
-function GroupDestroy(sender, id, previous_x1, previous_y1, previous_x2, previous_y2, previous_name, previous_type) {
+function GroupDestroy(sender, id, previous_x1, previous_y1, previous_x2, previous_y2, previous_name, previous_type, previous_group_id) {
     this.msg_type = "GroupDestroy";
     this.sender = sender;
     this.id = id;
@@ -323,6 +330,7 @@ function GroupDestroy(sender, id, previous_x1, previous_y1, previous_x2, previou
     this.previous_y2 = previous_y2;
     this.previous_name = previous_name;
     this.previous_type = previous_type;
+    this.previous_group_id = previous_group_id;
 }
 exports.GroupDestroy = GroupDestroy;
 
@@ -356,17 +364,6 @@ function GroupMembership(sender, id, members) {
     this.members = members;
 }
 exports.GroupMembership = GroupMembership;
-
-function TableCellEdit(sender, sheet, col, row, old_value, new_value) {
-    this.msg_type = "TableCellEdit";
-    this.sender = sender;
-    this.sheet = sheet;
-    this.col = col;
-    this.row = row;
-    this.old_value = old_value;
-    this.new_value = new_value;
-}
-exports.TableCellEdit = TableCellEdit;
 
 function ProcessCreate(sender, id, name, type, device_id, x, y) {
     this.msg_type = "ProcessCreate";
@@ -421,3 +418,76 @@ function StreamUnSelected(sender, id) {
     this.id = id;
 }
 exports.StreamUnSelected = StreamUnSelected;
+
+function FSMTrace(order, fsm_name, from_state, to_state, recv_message_type) {
+    this.msg_type = 'FSMTrace';
+    this.order = order;
+    this.sender = 0;
+    this.trace_id = 0;
+    this.fsm_name = fsm_name;
+    this.from_state = from_state;
+    this.to_state = to_state;
+    this.recv_message_type = recv_message_type;
+}
+exports.FSMTrace = FSMTrace;
+
+function ChannelTrace(from_fsm, to_fsm, sent_message_type) {
+    this.msg_type = 'ChannelTrace';
+    this.sender = 0;
+    this.trace_id = 0;
+    this.from_fsm = from_fsm;
+    this.to_fsm = to_fsm;
+    this.sent_message_type = sent_message_type;
+}
+exports.ChannelTrace = ChannelTrace;
+
+function Snapshot(sender, devices, links, groups, streams, order, trace_id) {
+    this.msg_type = 'Snapshot';
+    this.sender = 0;
+    this.devices = devices;
+    this.links = links;
+    this.groups = groups;
+    this.streams = streams;
+    this.order = order;
+    this.trace_id = trace_id;
+}
+exports.Snapshot = Snapshot;
+
+function EnableTest() {
+    this.msg_type = "EnableTest";
+}
+exports.EnableTest = EnableTest;
+
+function DisableTest() {
+    this.msg_type = "DisableTest";
+}
+exports.DisableTest = DisableTest;
+
+function StartTest() {
+    this.msg_type = "StartTest";
+}
+exports.StartTest = StartTest;
+
+function TestCompleted() {
+    this.msg_type = "TestCompleted";
+}
+exports.TestCompleted = TestCompleted;
+
+function TestResult(sender, id, name, result, date, code_under_test) {
+    this.msg_type = "TestResult";
+    this.sender = sender;
+    this.id = id;
+    this.name = name;
+    this.result = result;
+    this.date = date;
+    this.code_under_test = code_under_test;
+}
+exports.TestResult = TestResult;
+
+function Coverage(sender, coverage, result_id) {
+    this.msg_type = "Coverage";
+    this.sender = sender;
+    this.coverage = coverage;
+    this.result_id = result_id;
+}
+exports.Coverage = Coverage;

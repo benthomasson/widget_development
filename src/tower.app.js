@@ -1,8 +1,8 @@
+/* Copyright (c) 2017 Red Hat, Inc. */
 
 var angular = require('angular');
-var ui_router = require('angular-ui-router');
 
-var tower = angular.module('tower', ['tablesUI', 'networkUI', 'ui.router']);
+var tower = angular.module('tower', ['networkUI', 'ui.router']);
 
 tower.config(function($stateProvider, $urlRouterProvider) {
 
@@ -21,15 +21,7 @@ tower.config(function($stateProvider, $urlRouterProvider) {
             url: '/topology',
             template: "<awx-network-ui></awx-network-ui>"
         });
-
-    $stateProvider
-        .state({
-            name: 'tables',
-            url: '/tables',
-            template: "<awx-tables-ui></awx-tables-ui>"
-        });
 });
 
 exports.tower = tower;
-exports.ui_router = ui_router;
 

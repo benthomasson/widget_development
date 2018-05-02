@@ -1,3 +1,4 @@
+/* Copyright (c) 2017 Red Hat, Inc. */
 var inherits = require('inherits');
 var fsm = require('./fsm.js');
 
@@ -55,7 +56,26 @@ inherits(_Move, _State);
 var Move = new _Move();
 exports.Move = Move;
 
+function _OffScreen () {
+    this.name = 'OffScreen';
+}
+inherits(_OffScreen, _State);
+var OffScreen = new _OffScreen();
+exports.OffScreen = OffScreen;
 
+function _OffScreen2 () {
+    this.name = 'OffScreen2';
+}
+inherits(_OffScreen2, _State);
+var OffScreen2 = new _OffScreen2();
+exports.OffScreen2 = OffScreen2;
+
+function _Disabled () {
+    this.name = 'Disabled';
+}
+inherits(_Disabled, _State);
+var Disabled = new _Disabled();
+exports.Disabled = Disabled;
 
 
 _Dropping.prototype.start = function (controller) {
@@ -63,14 +83,13 @@ _Dropping.prototype.start = function (controller) {
 
     var i = 0;
     var toolbox = controller.toolbox;
-    console.log(["Dropping", toolbox.selected_item]);
     for(i = 0; i < toolbox.items.length; i++) {
         toolbox.items[i].selected = false;
     }
 
     controller.dropped_action(toolbox.selected_item);
 
-    if (controller.remove_on_drop) {
+    if (controller.remove_on_drop && !toolbox.selected_item.template) {
         var dindex = toolbox.items.indexOf(toolbox.selected_item);
         if (dindex !== -1) {
             toolbox.items.splice(dindex, 1);
@@ -101,7 +120,7 @@ _Selected.prototype.onMouseUp = function (controller) {
     toolbox.selected_item = null;
     controller.changeState(Ready);
 };
-_Selected.prototype.onMouseUp.transitions = ['Move'];
+_Selected.prototype.onMouseUp.transitions = ['Ready'];
 
 
 _Selecting.prototype.onMouseDown = function (controller) {
@@ -125,7 +144,7 @@ _Selecting.prototype.onMouseDown = function (controller) {
         toolbox.selected_item.x = toolbox.x + toolbox.width/2;
         toolbox.selected_item.y = selected_item * toolbox.spacing + toolbox.y + toolbox.scroll_offset + toolbox.spacing/2;
         controller.scope.clear_selections();
-        controller.scope.first_controller.handle_message("UnselectAll", {});
+        controller.scope.first_channel.send("UnselectAll", {});
         controller.changeState(Selected);
     } else {
         toolbox.selected_item = null;
@@ -133,7 +152,11 @@ _Selecting.prototype.onMouseDown = function (controller) {
     }
 
 };
-_Selecting.prototype.onMouseDown.transitions = ['Selected'];
+_Selecting.prototype.onMouseDown.transitions = ['Selected', 'Ready'];
+
+_Ready.prototype.onEnable = function () {
+
+};
 
 _Ready.prototype.onMouseDown = function (controller, msg_type, $event) {
 
@@ -147,7 +170,7 @@ _Ready.prototype.onMouseDown = function (controller, msg_type, $event) {
        controller.handle_message(msg_type, $event);
 
     } else {
-        controller.next_controller.handle_message(msg_type, $event);
+        controller.delegate_channel.send(msg_type, $event);
     }
 };
 _Ready.prototype.onMouseDown.transitions = ['Selecting'];
@@ -164,25 +187,39 @@ _Ready.prototype.onMouseWheel = function (controller, msg_type, $event) {
        controller.handle_message(msg_type, $event);
 
     } else {
-        controller.next_controller.handle_message(msg_type, $event);
+        controller.delegate_channel.send(msg_type, $event);
     }
 };
 _Ready.prototype.onMouseWheel.transitions = ['Scrolling'];
 
+_Ready.prototype.onToggleToolbox = function (controller, msg_type, message) {
 
+    controller.changeState(OffScreen);
+    controller.delegate_channel.send(msg_type, message);
+
+};
+_Ready.prototype.onToggleToolbox.transitions = ['OffScreen'];
+
+_Ready.prototype.onDisable = function (controller) {
+
+    controller.changeState(Disabled);
+
+};
+_Ready.prototype.onDisable.transitions = ['Disabled'];
 
 _Scrolling.prototype.onMouseWheel = function (controller, msg_type, $event) {
 
     var delta = $event[1];
     controller.toolbox.scroll_offset += -1 * delta;
     controller.toolbox.scroll_offset = Math.min(controller.toolbox.scroll_offset, 0);
-    controller.toolbox.scroll_offset = Math.max(controller.toolbox.scroll_offset, -1 * controller.toolbox.spacing * controller.toolbox.items.length + controller.toolbox.height);
+    controller.toolbox.scroll_offset = Math.max(controller.toolbox.scroll_offset,
+                                                -1 * controller.toolbox.spacing * (controller.toolbox.items.length + 1) + controller.toolbox.height);
 
 
     controller.changeState(Ready);
 
 };
-_Scrolling.prototype.start.transitions = ['Ready'];
+_Scrolling.prototype.onMouseWheel.transitions = ['Ready'];
 
 
 
@@ -214,3 +251,82 @@ _Move.prototype.onMouseMove = function (controller) {
     controller.scope.pressedX =  controller.scope.mouseX;
     controller.scope.pressedY =  controller.scope.mouseY;
 };
+
+
+_OffScreen.prototype.onToggleToolbox = function (controller, msg_type, message) {
+
+    controller.changeState(Ready);
+    controller.delegate_channel.send(msg_type, message);
+
+};
+_OffScreen.prototype.onToggleToolbox.transitions = ['Ready'];
+
+
+_OffScreen.prototype.start = function (controller) {
+
+    controller.toolbox.enabled = false;
+
+};
+
+_OffScreen.prototype.end = function (controller) {
+
+    controller.toolbox.enabled = true;
+
+};
+
+_OffScreen.prototype.onDisable = function (controller) {
+
+    controller.changeState(OffScreen2);
+};
+_OffScreen.prototype.onDisable.transitions = ['OffScreen2'];
+
+_OffScreen2.prototype.onEnable = function (controller) {
+
+    controller.changeState(OffScreen);
+};
+_OffScreen2.prototype.onEnable.transitions = ['OffScreen'];
+
+_OffScreen2.prototype.onDisable = function () {
+
+};
+
+_OffScreen2.prototype.start = function (controller) {
+
+    controller.toolbox.enabled = false;
+};
+
+_OffScreen2.prototype.onToggleToolbox = function (controller, msg_type, message) {
+
+    controller.changeState(Disabled);
+    controller.delegate_channel.send(msg_type, message);
+};
+_OffScreen2.prototype.onToggleToolbox.transitions = ['Disabled'];
+
+_Disabled.prototype.onDisable = function () {
+
+};
+
+_Disabled.prototype.onEnable = function (controller) {
+
+    controller.changeState(Ready);
+};
+_Disabled.prototype.onEnable.transitions = ['Ready'];
+
+_Disabled.prototype.start = function (controller) {
+    if(controller.toolbox !== undefined){
+        controller.toolbox.enabled = false;
+    }
+};
+
+_Disabled.prototype.end = function (controller) {
+
+    controller.toolbox.enabled = true;
+
+};
+
+_Disabled.prototype.onToggleToolbox = function (controller, msg_type, message) {
+
+    controller.changeState(OffScreen2);
+    controller.delegate_channel.send(msg_type, message);
+};
+_Disabled.prototype.onToggleToolbox.transitions = ['OffScreen2'];
