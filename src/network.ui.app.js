@@ -1,8 +1,8 @@
 /* Copyright (c) 2017 Red Hat, Inc. */
 
-import atFeaturesNetworking from './network-nav/main';
-import networkDetailsDirective from './network-details/main';
-import networkZoomWidget from './zoom-widget/main';
+//import atFeaturesNetworking from './network-nav/main';
+//import networkDetailsDirective from './network-details/main';
+//import networkZoomWidget from './zoom-widget/main';
 
 //console.log = function () { };
 var angular = require('angular');
@@ -35,9 +35,9 @@ var awxNetworkUI = require('./network.ui.directive.js');
 
 var networkUI = angular.module('networkUI', [
         'monospaced.mousewheel',
-        atFeaturesNetworking,
-        networkDetailsDirective.name,
-        networkZoomWidget.name
+        //atFeaturesNetworking,
+        //networkDetailsDirective.name,
+        //networkZoomWidget.name
     ])
     .controller('NetworkUIController', NetworkUIController.NetworkUIController)
     .directive('awxNetCursor', cursor.cursor)
