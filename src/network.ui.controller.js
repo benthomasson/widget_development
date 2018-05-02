@@ -32,12 +32,13 @@ var NetworkUIController = function($scope,
                                    $window,
                                    $http,
                                    $q,
-                                   $state,
-                                   ProcessErrors,
-                                   ConfigService,
-                                   rbacUiControlService,
-                                   HostsService,
-                                   GroupsService) {
+                                   $state
+                                   //ProcessErrors,
+                                   //ConfigService,
+                                   //rbacUiControlService,
+                                   //HostsService,
+                                   //GroupsService
+                                   ) {
 
   window.scope = $scope;
   var i = 0;
@@ -47,7 +48,7 @@ var NetworkUIController = function($scope,
   $scope.http = $http;
 
   $scope.api_token = '';
-  $scope.disconnected = false;
+  $scope.disconnected = true;
 
   $scope.topology_id = 0;
   // Create a web socket to connect to the backend server
@@ -72,6 +73,7 @@ var NetworkUIController = function($scope,
           on_message: util.noop
       };
   }
+  $scope.document = document;
   $scope.my_location = $location.protocol() + "://" + $location.host() + ':' + $location.port();
   $scope.history = [];
   $scope.client_id = 0;
@@ -321,7 +323,8 @@ var NetworkUIController = function($scope,
                }
            })
            .catch(({data, status}) => {
-               ProcessErrors($scope, data, status, null, { hdr: 'Error!', msg: 'Failed to get host data: ' + status });
+               console.log([data, status]);
+               //ProcessErrors($scope, data, status, null, { hdr: 'Error!', msg: 'Failed to get host data: ' + status });
            });
   }
   $scope.inventory_toolbox.spacing = 150;
@@ -744,15 +747,16 @@ var NetworkUIController = function($scope,
                      return host;
                  })
                  .catch(({data, status}) => {
-                     ProcessErrors($scope, data, status, null, { hdr: 'Error!', msg: 'Failed to get host data: ' + status });
+                     console.log([data, status]);
+                     //ProcessErrors($scope, data, status, null, { hdr: 'Error!', msg: 'Failed to get host data: ' + status });
                  });
-            let canAdd = rbacUiControlService.canAdd('hosts')
-                    .then(function(res) {
-                        return res.canAdd;
-                    })
-                    .catch(function() {
-                        return false;
-                    });
+            let canAdd = true; //rbacUiControlService.canAdd('hosts')
+                    //.then(function(res) {
+                    //    return res.canAdd;
+                    //})
+                    //.catch(function() {
+                    //    return false;
+                    //});
             Promise.all([hostData, canAdd]).then((values) => {
                 let item = values[0];
                 let canAdd = values[1];
@@ -1262,42 +1266,7 @@ var NetworkUIController = function($scope,
         }
         console.log(device);
 
-        function update_inventory () {
-            HostsService.post({inventory: $scope.inventory_id,
-                               name: device.name,
-                               variables: JSON.stringify({awx: {name: device.name,
-                                                                type: device.type}})})
-                        .then(function (res) {
-                            console.log(res);
-                            device.host_id = res.data.id;
-                            device.variables = util.parse_variables(res.data.variables);
-                            $scope.send_control_message(new messages.DeviceInventoryUpdate($scope.client_id,
-                                                                                           device.id,
-                                                                                           device.host_id));
-                        })
-                        .catch(function (res) {
-                            console.log(res);
-                        });
-        }
-
-        return HostsService.get({inventory: $scope.inventory_id,
-                          name: device.name})
-                    .then(function (res) {
-                        console.log(res);
-                        if (res.data.count === 0) {
-                            update_inventory();
-                        } else if (res.data.count === 1) {
-                            device.host_id = res.data.results[0].id;
-                            device.variables = util.parse_variables(res.data.results[0].variables);
-                            $scope.send_control_message(new messages.DeviceInventoryUpdate($scope.client_id,
-                                                                                           device.id,
-                                                                                           device.host_id));
-                        }
-                    })
-                    .catch(function (res) {
-                        console.log(res);
-                    });
-
+        return [];
     };
 
     $scope.create_inventory_group = function (group) {
@@ -1305,41 +1274,7 @@ var NetworkUIController = function($scope,
             return;
         }
         console.log(group);
-        function update_inventory () {
-            GroupsService.post({inventory: $scope.inventory_id,
-                               name: group.name,
-                               variables: JSON.stringify({awx: {name: group.name,
-                                                                type: group.type}})})
-                        .then(function (res) {
-                            console.log(res);
-                            group.group_id = res.data.id;
-                            group.variables = util.parse_variables(res.data.variables);
-                            $scope.send_control_message(new messages.GroupInventoryUpdate($scope.client_id,
-                                                                                          group.id,
-                                                                                          group.group_id));
-                        })
-                        .catch(function (res) {
-                            console.log(res);
-                        });
-        }
-        return GroupsService.get({inventory: $scope.inventory_id,
-                          name: group.name})
-                    .then(function (res) {
-                        console.log(res);
-                        if (res.data.count === 0) {
-                            update_inventory();
-                        } else if (res.data.count === 1) {
-                            group.group_id = res.data.results[0].id;
-                            group.variables = util.parse_variables(res.data.results[0].variables);
-                            $scope.send_control_message(new messages.GroupInventoryUpdate($scope.client_id,
-                                                                                          group.id,
-                                                                                          group.group_id));
-                        }
-                    })
-                    .catch(function (res) {
-                        console.log(res);
-                    });
-
+        return [];
     };
 
     $scope.create_group_association = function (group, devices) {
@@ -1371,21 +1306,6 @@ var NetworkUIController = function($scope,
         }
 
         console.log(['delete_group_association', group, devices]);
-
-        function noop (response) {
-            console.log(response);
-        }
-
-        function error_handler (response) {
-            console.log(response);
-        }
-
-        var i = 0;
-        for (i = 0; i < devices.length; i ++) {
-            if (!devices[i].template) {
-                GroupsService.disassociateHost(devices[i].host_id, group.group_id).then(noop).catch(error_handler);
-            }
-        }
     };
 
     $scope.onDeviceCreate = function(data) {
@@ -2074,7 +1994,7 @@ var NetworkUIController = function($scope,
            })
            .catch(({data, status}) => {
                console.log([data, status]);
-               ProcessErrors($scope, data, status, null, { hdr: 'Error!', msg: 'Failed to get host data: ' + status });
+               //ProcessErrors($scope, data, status, null, { hdr: 'Error!', msg: 'Failed to get host data: ' + status });
            });
 
     };
@@ -2223,11 +2143,11 @@ var NetworkUIController = function($scope,
         $scope.$apply();
     }, 10);
 
-    ConfigService
-        .getConfig()
-        .then(function(config){
-            $scope.version = config.version;
-        });
+    //ConfigService
+    //    .getConfig()
+    //    .then(function(config){
+    //        $scope.version = config.version;
+    //    });
 
     $scope.reset_coverage = function() {
         var i = null;

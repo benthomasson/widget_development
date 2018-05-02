@@ -3,6 +3,7 @@ const webpack = require('webpack');
 const SRC_PATH = path.resolve(__dirname, 'src');
 const NETWORK_UI_PATH = SRC_PATH;
 module.exports = {
+    devtool: 'source-map',
     entry: {
         app: "./src/main.js",
         vendor: ["angular",
