@@ -28,6 +28,8 @@ var inventoryToolboxClipPath = require('./inventory.toolbox.clip.path.directive.
 var statusLight = require('./status.light.directive.js');
 var taskStatus = require('./task.status.directive.js');
 var fsm = require('./fsm.directive.js');
+var queue = require('./queue.directive.js');
+var pod = require('./pod.directive.js');
 var debug = require('./debug.directive.js');
 var awxNetworkWidgets = require('./network.widgets.directive.js');
 
@@ -63,6 +65,8 @@ var networkWidgets = angular.module('networkWidgets', [
     .directive('awxNetStatusLight', statusLight.statusLight)
     .directive('awxNetTaskStatus', taskStatus.taskStatus)
     .directive('msaFsm', fsm.fsm)
+    .directive('msaQueue', queue.queue)
+    .directive('cdPod', pod.pod)
     .directive('awxNetworkWidgets', awxNetworkWidgets.awxNetworkWidgets);
 
 exports.networkWidgets = networkWidgets;

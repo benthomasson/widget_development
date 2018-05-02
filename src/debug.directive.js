@@ -1,6 +1,9 @@
+/* Copyright (c) 2017 Red Hat, Inc. */
+
+const templateUrl = require('~network-ui/debug.partial.svg');
 
 function debug () {
-  return { restrict: 'A', templateUrl: '/static/network_ui/widgets/debug.html' };
+  return { restrict: 'A', templateUrl};
 }
 
 exports.debug = debug;

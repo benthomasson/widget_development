@@ -1,4 +1,4 @@
-//console.log = function () { };
+/* Copyright (c) 2017 Red Hat, Inc. */
 var angular = require('angular');
 var fsm = require('./fsm.js');
 var null_fsm = require('./null.fsm.js');
@@ -8,47 +8,78 @@ var rack_fsm = require('./rack.fsm.js');
 var site_fsm = require('./site.fsm.js');
 var hotkeys = require('./hotkeys.fsm.js');
 var toolbox_fsm = require('./toolbox.fsm.js');
-var view = require('./view.js');
-var move = require('./move.js');
-var link = require('./link.js');
+var view = require('./view.fsm.js');
+var move = require('./move.fsm.js');
+var link = require('./link.fsm.js');
 var stream_fsm = require('./stream.fsm.js');
-var group = require('./group.js');
-var buttons = require('./buttons.js');
-var time = require('./time.js');
+var group = require('./group.fsm.js');
+var buttons = require('./buttons.fsm.js');
+var time = require('./time.fsm.js');
+var test_fsm = require('./test.fsm.js');
 var util = require('./util.js');
 var models = require('./models.js');
 var messages = require('./messages.js');
+var animations = require('./animations.js');
+var keybindings = require('./keybindings.fsm.js');
+var details_panel_fsm = require('./details.panel.fsm.js');
 var svg_crowbar = require('./svg-crowbar.js');
 var ReconnectingWebSocket = require('reconnectingwebsocket');
+var nunjucks = require('nunjucks');
 
-var NetworkUIController = function($scope, $document, $location, $window, $http) {
+var NetworkUIController = function($scope,
+                                   $document,
+                                   $location,
+                                   $window,
+                                   $http,
+                                   $q,
+                                   $state,
+                                   ProcessErrors,
+                                   ConfigService,
+                                   rbacUiControlService,
+                                   HostsService,
+                                   GroupsService) {
 
   window.scope = $scope;
   var i = 0;
 
+  $scope.nunjucks = nunjucks;
+
+  $scope.http = $http;
+
   $scope.api_token = '';
   $scope.disconnected = false;
 
-  $scope.topology_id = $location.search().topology_id || 0;
+  $scope.topology_id = 0;
   // Create a web socket to connect to the backend server
-  //
-  $scope.inventory_id = $location.search().inventory_id || 0;
 
+  $scope.inventory_id = $state.params.inventory_id;
+
+  var protocol = null;
+
+  if ($location.protocol() === 'http') {
+    protocol = 'ws';
+  } else if ($location.protocol() === 'https') {
+    protocol = 'wss';
+  }
+
+  $scope.initial_messages = [];
   if (!$scope.disconnected) {
-  $scope.control_socket = new ReconnectingWebSocket("ws://" + window.location.host + "/network_ui/topology?topology_id=" + $scope.topology_id,
-                                                           null,
-                                                           {debug: false, reconnectInterval: 300});
+      $scope.control_socket = new ReconnectingWebSocket(protocol + "://" + window.location.host + "/network_ui/topology?inventory_id=" + $scope.inventory_id,
+                                                         null,
+                                                         {debug: false, reconnectInterval: 300});
   } else {
       $scope.control_socket = {
           on_message: util.noop
       };
   }
+  $scope.my_location = $location.protocol() + "://" + $location.host() + ':' + $location.port();
   $scope.history = [];
   $scope.client_id = 0;
   $scope.onMouseDownResult = "";
   $scope.onMouseUpResult = "";
   $scope.onMouseEnterResult = "";
   $scope.onMouseLeaveResult = "";
+  $scope.onMouseMoveResult = "";
   $scope.onMouseMoveResult = "";
   $scope.current_scale = 1.0;
   $scope.current_mode = null;
@@ -83,51 +114,152 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
   $scope.hide_interfaces = false;
   $scope.hide_groups = false;
   $scope.graph = {'width': window.innerWidth,
-                  'right_column': window.innerWidth - 300,
+                  'right_column': 300,
                   'height': window.innerHeight};
   $scope.device_id_seq = util.natural_numbers(0);
   $scope.link_id_seq = util.natural_numbers(0);
   $scope.group_id_seq = util.natural_numbers(0);
   $scope.message_id_seq = util.natural_numbers(0);
   $scope.stream_id_seq = util.natural_numbers(0);
+  $scope.test_result_id_seq = util.natural_numbers(0);
+  $scope.animation_id_seq = util.natural_numbers(0);
+  $scope.overall_toolbox_collapsed = false;
   $scope.time_pointer = -1;
   $scope.frame = 0;
   $scope.recording = false;
   $scope.replay = false;
-  $scope.touch_data = {};
-  $scope.touches = [];
   $scope.devices = [];
   $scope.links = [];
   $scope.groups = [];
   $scope.processes = [];
-  $scope.configurations = [];
+  $scope.tests = [];
+  $scope.current_tests = [];
+  $scope.current_test = null;
+  $scope.testing = false;
+  $scope.template_building = false;
+  $scope.version = null;
+  $scope.test_events = [];
+  $scope.test_results = [];
+  $scope.test_errors = [];
   $scope.streams = [];
+  $scope.animations = [];
+  $scope.sequences = {};
   $scope.view_port = {'x': 0,
                       'y': 0,
                       'width': 0,
-                      'height': 0};
+                      'height': 0,
+                      top_extent: function (scaledY) {
+                          this.x1 = this.x;
+                          this.x2 = this.x + this.width;
+                          this.y1 = this.y;
+                          this.y2 = this.y + this.height;
+                          var y2 = this.y2 !== null ? this.y2 : scaledY;
+                          return (this.y1 < y2? this.y1 : y2);
+                      },
+                      left_extent: function (scaledX) {
+                          this.x1 = this.x;
+                          this.x2 = this.x + this.width;
+                          this.y1 = this.y;
+                          this.y2 = this.y + this.height;
+                          var x2 = this.x2 !== null ? this.x2 : scaledX;
+                          return (this.x1 < x2? this.x1 : x2);
+                      },
+                      bottom_extent: function (scaledY) {
+                          this.x1 = this.x;
+                          this.x2 = this.x + this.width;
+                          this.y1 = this.y;
+                          this.y2 = this.y + this.height;
+                          var y2 = this.y2 !== null ? this.y2 : scaledY;
+                          return (this.y1 > y2? this.y1 : y2);
+                      },
+                      right_extent: function (scaledX) {
+                          this.x1 = this.x;
+                          this.x2 = this.x + this.width;
+                          this.y1 = this.y;
+                          this.y2 = this.y + this.height;
+                          var x2 = this.x2 !== null ? this.x2 : scaledX;
+                          return (this.x1 > x2? this.x1 : x2);
+                      }
+                  };
+  $scope.trace_id_seq = util.natural_numbers(0);
+  $scope.trace_order_seq = util.natural_numbers(0);
+  $scope.trace_id = $scope.trace_id_seq();
+  $scope.jump = {from_x: 0,
+                 from_y: 0,
+                 to_x: 0,
+                 to_y: 0};
 
-  $scope.null_controller = new fsm.FSMController($scope, null_fsm.Start, null);
-  $scope.hotkeys_controller = new fsm.FSMController($scope, hotkeys.Start, $scope.null_controller);
-  $scope.view_controller = new fsm.FSMController($scope, view.Start, $scope.hotkeys_controller);
-  $scope.device_detail_controller = new fsm.FSMController($scope, device_detail_fsm.Start, $scope.view_controller);
-  $scope.move_controller = new fsm.FSMController($scope, move.Start, $scope.device_detail_controller);
-  $scope.link_controller = new fsm.FSMController($scope, link.Start, $scope.move_controller);
-  $scope.stream_controller = new fsm.FSMController($scope, stream_fsm.Start, $scope.link_controller);
-  $scope.group_controller = new fsm.FSMController($scope, group.Start, $scope.stream_controller);
-  $scope.rack_controller = new fsm.FSMController($scope, rack_fsm.Disable, $scope.group_controller);
-  $scope.site_controller = new fsm.FSMController($scope, site_fsm.Disable, $scope.rack_controller);
-  $scope.buttons_controller = new fsm.FSMController($scope, buttons.Start, $scope.site_controller);
-  $scope.time_controller = new fsm.FSMController($scope, time.Start, $scope.buttons_controller);
-  $scope.app_toolbox_controller = new fsm.FSMController($scope, toolbox_fsm.Start, $scope.time_controller);
+    $scope.send_trace_message = function (message) {
+        if (!$scope.recording) {
+            return;
+        }
+        message.sender = $scope.client_id;
+        message.trace_id = $scope.trace_id;
+        message.message_id = $scope.message_id_seq();
+        var data = messages.serialize(message);
+        if (!$scope.disconnected) {
+            try {
+                $scope.control_socket.send(data);
+            }
+            catch(err) {
+                $scope.initial_messages.push(message);
+            }
+        }
+    };
+
+    $scope.onKeyDown = function ($event) {
+        if ($scope.recording) {
+            $scope.send_control_message(new messages.KeyEvent($scope.client_id,
+                                                              $event.key,
+                                                              $event.keyCode,
+                                                              $event.type,
+                                                              $event.altKey,
+                                                              $event.shiftKey,
+                                                              $event.ctrlKey,
+                                                              $event.metaKey,
+                                                              $scope.trace_id));
+        }
+        $scope.last_event = $event;
+        $scope.last_key = $event.key;
+        $scope.last_key_code = $event.keyCode;
+        $scope.first_channel.send('KeyDown', $event);
+        $scope.$apply();
+        $event.preventDefault();
+    };
+
+  //Define the FSMs
+  $scope.null_controller = new fsm.FSMController($scope, "null_fsm", null_fsm.Start, $scope);
+  $scope.hotkeys_controller = new fsm.FSMController($scope, "hotkeys_fsm", hotkeys.Start, $scope);
+  $scope.keybindings_controller = new fsm.FSMController($scope, "keybindings_fsm", keybindings.Start, $scope);
+  $scope.view_controller = new fsm.FSMController($scope, "view_fsm", view.Start, $scope);
+  $scope.device_detail_controller = new fsm.FSMController($scope, "device_detail_fsm", device_detail_fsm.Start, $scope);
+  $scope.move_controller = new fsm.FSMController($scope, "move_fsm", move.Start, $scope);
+  $scope.details_panel_controller = new fsm.FSMController($scope, "details_panel_fsm", details_panel_fsm.Start, $scope);
+  $scope.link_controller = new fsm.FSMController($scope, "link_fsm", link.Start, $scope);
+  $scope.stream_controller = new fsm.FSMController($scope, "stream_fsm", stream_fsm.Start, $scope);
+  $scope.group_controller = new fsm.FSMController($scope, "group_fsm", group.Start, $scope);
+  $scope.rack_controller = new fsm.FSMController($scope, "rack_fsm", rack_fsm.Disable, $scope);
+  $scope.site_controller = new fsm.FSMController($scope, "site_fsm", site_fsm.Disable, $scope);
+  $scope.buttons_controller = new fsm.FSMController($scope, "buttons_fsm", buttons.Start, $scope);
+  $scope.time_controller = new fsm.FSMController($scope, "time_fsm", time.Start, $scope);
+  $scope.test_controller = new fsm.FSMController($scope, "test_fsm", test_fsm.Start, $scope);
+  $scope.app_toolbox_controller = new fsm.FSMController($scope, "toolbox_fsm", toolbox_fsm.Start, $scope);
+
   //App Toolbox Setup
-  $scope.app_toolbox = new models.ToolBox(0, 'Process', 'app', 10, 200, 150, $scope.graph.height - 200 - 100);
+  // const toolboxTopMargin = 115;
+  var toolboxTopMargin = $('.Networking-top').height();
+  var toolboxTitleMargin = toolboxTopMargin + 35;
+  var toolboxHeight = $scope.graph.height - $('.Networking-top').height();
+  $scope.app_toolbox = new models.ToolBox(0, 'Process', 'app', 0, toolboxTopMargin, 200, toolboxHeight);
+  $scope.app_toolbox.title_coordinates = {x: 70, y: toolboxTitleMargin};
   $scope.app_toolbox.spacing = 150;
   $scope.app_toolbox.enabled = false;
   $scope.app_toolbox_controller.toolbox = $scope.app_toolbox;
+  $scope.app_toolbox_controller.debug = true;
   $scope.app_toolbox_controller.dropped_action = function (selected_item) {
-    $scope.first_controller.handle_message("PasteProcess", new messages.PasteProcess(selected_item));
+    $scope.first_channel.send("PasteProcess", new messages.PasteProcess(selected_item));
   };
+
   $scope.app_toolbox.items.push(new models.Process(0, 'BGP', 'process', 0, 0));
   $scope.app_toolbox.items.push(new models.Process(0, 'OSPF', 'process', 0, 0));
   $scope.app_toolbox.items.push(new models.Process(0, 'STP', 'process', 0, 0));
@@ -137,63 +269,100 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
       $scope.app_toolbox.items[i].icon = true;
   }
 
-  $scope.inventory_toolbox_controller = new fsm.FSMController($scope, toolbox_fsm.Start, $scope.app_toolbox_controller);
+  $scope.inventory_toolbox_controller = new fsm.FSMController($scope, "toolbox_fsm", toolbox_fsm.Start, $scope);
+
 
   //Inventory Toolbox Setup
-  $scope.inventory_toolbox = new models.ToolBox(0, 'Inventory', 'device', 10, 200, 150, $scope.graph.height - 200 - 100);
+  $scope.inventory_toolbox = new models.ToolBox(0, 'Inventory', 'device', 0, toolboxTopMargin, 200, toolboxHeight);
   if (!$scope.disconnected) {
-      $http.get('/api/v2/inventories/' + $scope.inventory_id + '/hosts/?format=json')
+      $http.get('/api/v2/inventories/' + $scope.inventory_id + '/hosts/')
            .then(function(response) {
-               console.log(response);
-
-               var host = null;
+               var devices_by_name = {};
                var i = 0;
-               function add_host (response) {
-                   console.log(response);
-                   var device = new models.Device(0, response.data.name, 0, 0, response.data.type);
-                   device.icon = true;
-                   $scope.inventory_toolbox.items.push(device);
+               for (i = 0; i < $scope.devices.length; i++) {
+                   devices_by_name[$scope.devices[i].name] = $scope.devices[i];
                }
-               for (i=0; i<response.data.results.length;i++) {
-                   host = response.data.results[i];
-                   $http.get('/api/v2/hosts/'+ host.id + '/variable_data?format=json')
-                        .then(add_host);
+               let hosts = response.data.results;
+               for(i = 0; i<hosts.length; i++) {
+                   try {
+                       var device_type = null;
+                       var device_name = null;
+                       var device = null;
+                       let host = hosts[i];
+                       if (host.variables !== "") {
+                           host.data = jsyaml.safeLoad(host.variables);
+                       } else {
+                           host.data = {};
+                       }
+                       if (host.data.awx === undefined) {
+                           device_type = 'unknown';
+                           device_name = host.name;
+                       } else {
+                           if (host.data.awx.type === undefined) {
+                               device_type = 'unknown';
+                           } else {
+                               device_type = host.data.awx.type;
+                           }
+                           if (host.data.awx.name === undefined) {
+                               device_name = host.name;
+                           } else {
+                               device_name = host.data.awx.name;
+                           }
+                       }
+                       if (devices_by_name[device_name] === undefined) {
+                           device = new models.Device(0, device_name, 0, 0, device_type, host.id);
+                           device.icon = true;
+                           device.variables = JSON.stringify(host.data);
+                           $scope.inventory_toolbox.items.push(device);
+                       }
+                   } catch (error) {
+                       console.log(error);
+                   }
                }
+           })
+           .catch(({data, status}) => {
+               ProcessErrors($scope, data, status, null, { hdr: 'Error!', msg: 'Failed to get host data: ' + status });
            });
   }
   $scope.inventory_toolbox.spacing = 150;
   $scope.inventory_toolbox.enabled = true;
+  $scope.inventory_toolbox.title_coordinates = {x: 60, y: toolboxTitleMargin};
   $scope.inventory_toolbox_controller.toolbox = $scope.inventory_toolbox;
   $scope.inventory_toolbox_controller.remove_on_drop = true;
+  $scope.inventory_toolbox_controller.debug = true;
   $scope.inventory_toolbox_controller.dropped_action = function (selected_item) {
-    $scope.first_controller.handle_message("PasteDevice", new messages.PasteDevice(selected_item));
+    $scope.first_channel.send("PasteDevice", new messages.PasteDevice(selected_item));
   };
 
   //End Inventory Toolbox Setup
-  $scope.rack_toolbox_controller = new fsm.FSMController($scope, toolbox_fsm.Start, $scope.inventory_toolbox_controller);
+  $scope.rack_toolbox_controller = new fsm.FSMController($scope, "toolbox_fsm", toolbox_fsm.Start, $scope);
   //Rack Toolbox Setup
-  $scope.rack_toolbox = new models.ToolBox(0, 'Rack', 'rack', 10, 200, 150, $scope.graph.height - 200 - 100);
+  $scope.rack_toolbox = new models.ToolBox(0, 'Rack', 'rack', 0, toolboxTopMargin, 200, toolboxHeight);
+  $scope.rack_toolbox.title_coordinates = {x: 80, y: toolboxTitleMargin};
   $scope.rack_toolbox.spacing = 200;
   $scope.rack_toolbox.enabled = false;
   $scope.rack_toolbox_controller.remove_on_drop = false;
   $scope.rack_toolbox_controller.toolbox = $scope.rack_toolbox;
+  $scope.rack_toolbox_controller.debug = true;
   $scope.rack_toolbox_controller.dropped_action = function (selected_item) {
-    $scope.first_controller.handle_message("PasteRack", new messages.PasteRack(selected_item));
+    $scope.first_channel.send("PasteRack", new messages.PasteRack(selected_item));
   };
   for(i = 0; i < $scope.rack_toolbox.items.length; i++) {
       $scope.rack_toolbox.items[i].icon = true;
       $scope.rack_toolbox.items[i].selected = false;
   }
   //End Rack Toolbox Setup
-  $scope.site_toolbox_controller = new fsm.FSMController($scope, toolbox_fsm.Start, $scope.rack_toolbox_controller);
+  $scope.site_toolbox_controller = new fsm.FSMController($scope, "toolbox_fsm", toolbox_fsm.Start, $scope);
   //Site Toolbox Setup
-  $scope.site_toolbox = new models.ToolBox(0, 'Sites', 'sites', 10, 200, 150, $scope.graph.height - 200 - 100);
+  $scope.site_toolbox = new models.ToolBox(0, 'Sites', 'sites', 0, toolboxTopMargin, 200, toolboxHeight);
+  $scope.site_toolbox.title_coordinates = {x: 80, y: toolboxTitleMargin};
   $scope.site_toolbox.spacing = 200;
   $scope.site_toolbox.enabled = false;
   $scope.site_toolbox_controller.remove_on_drop = false;
   $scope.site_toolbox_controller.toolbox = $scope.site_toolbox;
+  $scope.site_toolbox_controller.debug = true;
   $scope.site_toolbox_controller.dropped_action = function (selected_item) {
-    $scope.first_controller.handle_message("PasteSite", new messages.PasteSite(selected_item));
+    $scope.first_channel.send("PasteSite", new messages.PasteSite(selected_item));
   };
   for(i = 0; i < $scope.site_toolbox.items.length; i++) {
       $scope.site_toolbox.items[i].icon = true;
@@ -201,24 +370,117 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
   }
   //End Site Toolbox Setup
 
-  $scope.mode_controller = new fsm.FSMController($scope, mode_fsm.Start, $scope.site_toolbox_controller);
-  $scope.first_controller = $scope.mode_controller;
+  $scope.mode_controller = new fsm.FSMController($scope, "mode_fsm", mode_fsm.Start, $scope);
+
+  //Wire up the FSMs
+  $scope.keybindings_controller.delegate_channel = new fsm.Channel($scope.keybindings_controller,
+                                                            $scope.hotkeys_controller,
+                                                            $scope);
+
+  $scope.view_controller.delegate_channel = new fsm.Channel($scope.view_controller,
+                                                            $scope.keybindings_controller,
+                                                            $scope);
+  $scope.device_detail_controller.delegate_channel = new fsm.Channel($scope.device_detail_controller,
+                                                            $scope.view_controller,
+                                                            $scope);
+  $scope.move_controller.delegate_channel = new fsm.Channel($scope.move_controller,
+                                                            $scope.device_detail_controller,
+                                                            $scope);
+  $scope.details_panel_controller.delegate_channel = new fsm.Channel($scope.details_panel_controller,
+                                                            $scope.move_controller,
+                                                            $scope);
+  $scope.link_controller.delegate_channel = new fsm.Channel($scope.link_controller,
+                                                                  $scope.details_panel_controller,
+                                                                  $scope);
+  $scope.stream_controller.delegate_channel = new fsm.Channel($scope.stream_controller,
+                                                                  $scope.link_controller,
+                                                                  $scope);
+  $scope.group_controller.delegate_channel = new fsm.Channel($scope.group_controller,
+                                                                  $scope.stream_controller,
+                                                                  $scope);
+  $scope.rack_controller.delegate_channel = new fsm.Channel($scope.rack_controller,
+                                                               $scope.group_controller,
+                                                               $scope);
+  $scope.site_controller.delegate_channel = new fsm.Channel($scope.site_controller,
+                                                               $scope.rack_controller,
+                                                               $scope);
+  $scope.app_toolbox_controller.delegate_channel = new fsm.Channel($scope.app_toolbox_controller,
+                                                            $scope.site_controller,
+                                                            $scope);
+  $scope.inventory_toolbox_controller.delegate_channel = new fsm.Channel($scope.inventory_toolbox_controller,
+                                                            $scope.app_toolbox_controller,
+                                                            $scope);
+  $scope.rack_toolbox_controller.delegate_channel = new fsm.Channel($scope.rack_toolbox_controller,
+                                                            $scope.inventory_toolbox_controller,
+                                                            $scope);
+  $scope.site_toolbox_controller.delegate_channel = new fsm.Channel($scope.site_toolbox_controller,
+                                                            $scope.rack_toolbox_controller,
+                                                            $scope);
+  $scope.buttons_controller.delegate_channel = new fsm.Channel($scope.buttons_controller,
+                                                               $scope.site_toolbox_controller,
+                                                               $scope);
+  $scope.time_controller.delegate_channel = new fsm.Channel($scope.time_controller,
+                                                            $scope.buttons_controller,
+                                                            $scope);
+  $scope.mode_controller.delegate_channel = new fsm.Channel($scope.mode_controller,
+                                                            $scope.time_controller,
+                                                            $scope);
+  $scope.test_controller.delegate_channel = new fsm.Channel($scope.test_controller,
+                                                            $scope.mode_controller,
+                                                            $scope);
+
+
+  $scope.first_channel = new fsm.Channel(null,
+                                         $scope.test_controller,
+                                         $scope);
+
     var getMouseEventResult = function (mouseEvent) {
-      return "(" + mouseEvent.screenX + ", " + mouseEvent.screenX + ")";
+      return "(" + mouseEvent.x + ", " + mouseEvent.y + ")";
     };
 
     $scope.updateScaledXY = function() {
+        if (isNaN($scope.mouseX) ||
+            isNaN($scope.mouseY) ||
+            isNaN($scope.panX) ||
+            isNaN($scope.panY) ||
+            isNaN($scope.current_scale)) {
+            return;
+        }
         $scope.scaledX = ($scope.mouseX - $scope.panX) / $scope.current_scale;
         $scope.scaledY = ($scope.mouseY - $scope.panY) / $scope.current_scale;
         $scope.view_port.x = - $scope.panX / $scope.current_scale;
         $scope.view_port.y = - $scope.panY / $scope.current_scale;
         $scope.view_port.width = $scope.graph.width / $scope.current_scale;
         $scope.view_port.height = $scope.graph.height / $scope.current_scale;
+
     };
 
     $scope.updatePanAndScale = function() {
+        if (isNaN($scope.panX) ||
+            isNaN($scope.panY) ||
+            isNaN($scope.current_scale)) {
+            return;
+        }
         var g = document.getElementById('frame_g');
         g.setAttribute('transform','translate(' + $scope.panX + ',' + $scope.panY + ') scale(' + $scope.current_scale + ')');
+    };
+
+    $scope.to_virtual_coordinates = function (b_x, b_y) {
+        var v_x = (b_x - $scope.panX) / $scope.current_scale;
+        var v_y = (b_y - $scope.panY) / $scope.current_scale;
+        return {x: v_x, y: v_y};
+    };
+
+    $scope.to_browser_coordinates = function (v_x, v_y) {
+        var b_x = (v_x * $scope.current_scale) + $scope.panX;
+        var b_y = (v_y * $scope.current_scale) + $scope.panY;
+        return {x: b_x, y: b_y};
+    };
+
+    $scope.to_pan = function (v_x, v_y) {
+        var p_x = v_x * $scope.current_scale * -1;
+        var p_y = v_y * $scope.current_scale * -1;
+        return {x: p_x, y: p_y};
     };
 
     $scope.clear_selections = function () {
@@ -276,9 +538,9 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
                 devices[i].selected = true;
                 $scope.send_control_message(new messages.DeviceSelected($scope.client_id, devices[i].id));
                 last_selected_device = devices[i];
-				  if ($scope.selected_items.indexOf($scope.devices[i]) === -1) {
-					  $scope.selected_items.push($scope.devices[i]);
-				  }
+                  if ($scope.selected_items.indexOf($scope.devices[i]) === -1) {
+                      $scope.selected_items.push($scope.devices[i]);
+                  }
                 if ($scope.selected_devices.indexOf(devices[i]) === -1) {
                     $scope.selected_devices.push(devices[i]);
                 }
@@ -312,7 +574,7 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
         // Do not select links if a device was selected
         if (last_selected_device === null && last_selected_interface === null) {
             for (i = $scope.links.length - 1; i >= 0; i--) {
-                if($scope.links[i].is_selected($scope.scaledX, $scope.scaledY)) {
+                if ($scope.links[i].is_selected($scope.scaledX, $scope.scaledY)) {
                     $scope.links[i].selected = true;
                     $scope.send_control_message(new messages.LinkSelected($scope.client_id, $scope.links[i].id));
                     last_selected_link = $scope.links[i];
@@ -337,192 +599,444 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
 
     // Event Handlers
 
+    $scope.normalize_mouse_event = function ($event) {
+        if ($event.pageX !== undefined) {
+            $event.x = $event.pageX;
+        }
+        if ($event.pageY !== undefined) {
+            $event.y = $event.pageY;
+        }
+        if ($event.originalEvent !== undefined) {
+            var originalEvent = $event.originalEvent;
+            if (originalEvent.wheelDelta !== undefined) {
+                $event.delta = $event.originalEvent.wheelDelta;
+            }
+            if (originalEvent.wheelDeltaX !== undefined) {
+                $event.deltaX = $event.originalEvent.wheelDeltaX;
+            }
+            if (originalEvent.wheelDeltaY !== undefined) {
+                $event.deltaY = $event.originalEvent.wheelDeltaY;
+            }
+        }
+    };
+
     $scope.onMouseDown = function ($event) {
+      $scope.normalize_mouse_event($event);
       if ($scope.recording) {
-          $scope.send_control_message(new messages.MouseEvent($scope.client_id, $event.offsetX, $event.offsetY, $event.type));
+          $scope.send_control_message(new messages.MouseEvent($scope.client_id, $event.x, $event.y, $event.type, $scope.trace_id));
       }
       $scope.last_event = $event;
-      $scope.first_controller.handle_message('MouseDown', $event);
+      $scope.first_channel.send('MouseDown', $event);
       $scope.onMouseDownResult = getMouseEventResult($event);
-	  $event.preventDefault();
+      $event.preventDefault();
     };
 
     $scope.onMouseUp = function ($event) {
+      $scope.normalize_mouse_event($event);
       if ($scope.recording) {
-          $scope.send_control_message(new messages.MouseEvent($scope.client_id, $event.offsetX, $event.offsetY, $event.type));
+          $scope.send_control_message(new messages.MouseEvent($scope.client_id, $event.x, $event.y, $event.type, $scope.trace_id));
       }
       $scope.last_event = $event;
-      $scope.first_controller.handle_message('MouseUp', $event);
+      $scope.first_channel.send('MouseUp', $event);
       $scope.onMouseUpResult = getMouseEventResult($event);
-	  $event.preventDefault();
+      $event.preventDefault();
     };
 
     $scope.onMouseLeave = function ($event) {
+      $scope.normalize_mouse_event($event);
       if ($scope.recording) {
-          $scope.send_control_message(new messages.MouseEvent($scope.client_id, $event.offsetX, $event.offsetY, $event.type));
+          $scope.send_control_message(new messages.MouseEvent($scope.client_id, $event.x, $event.y, $event.type, $scope.trace_id));
       }
       $scope.onMouseLeaveResult = getMouseEventResult($event);
       $scope.cursor.hidden = true;
-	  $event.preventDefault();
+      $event.preventDefault();
     };
 
     $scope.onMouseMove = function ($event) {
+      $scope.normalize_mouse_event($event);
       if ($scope.recording) {
-          $scope.send_control_message(new messages.MouseEvent($scope.client_id, $event.offsetX, $event.offsetY, $event.type));
+          $scope.send_control_message(new messages.MouseEvent($scope.client_id, $event.x, $event.y, $event.type, $scope.trace_id));
       }
       //var coords = getCrossBrowserElementCoords($event);
       $scope.cursor.hidden = false;
-      $scope.cursor.x = $event.offsetX;
-      $scope.cursor.y = $event.offsetY;
-      $scope.mouseX = $event.offsetX;
-      $scope.mouseY = $event.offsetY;
+      $scope.cursor.x = $event.x;
+      $scope.cursor.y = $event.y;
+      $scope.mouseX = $event.x;
+      $scope.mouseY = $event.y;
       $scope.updateScaledXY();
-      $scope.first_controller.handle_message('MouseMove', $event);
+      $scope.first_channel.send('MouseMove', $event);
       $scope.onMouseMoveResult = getMouseEventResult($event);
-	  $event.preventDefault();
+      $event.preventDefault();
     };
 
     $scope.onMouseOver = function ($event) {
+      $scope.normalize_mouse_event($event);
       if ($scope.recording) {
-          $scope.send_control_message(new messages.MouseEvent($scope.client_id, $event.x, $event.offsetY, $event.type));
+          $scope.send_control_message(new messages.MouseEvent($scope.client_id, $event.x, $event.y, $event.type, $scope.trace_id));
       }
       $scope.onMouseOverResult = getMouseEventResult($event);
       $scope.cursor.hidden = false;
-	  $event.preventDefault();
+      $event.preventDefault();
     };
 
     $scope.onMouseEnter = $scope.onMouseOver;
 
-    $scope.onMouseWheel = function ($event, delta, deltaX, deltaY) {
+    $scope.onMouseWheel = function ($event) {
+      $scope.normalize_mouse_event($event);
+      var delta = $event.delta;
+      var deltaX = $event.deltaX;
+      var deltaY = $event.deltaY;
       if ($scope.recording) {
-          $scope.send_control_message(new messages.MouseWheelEvent($scope.client_id, delta, deltaX, deltaY, $event.type, $event.originalEvent.metaKey));
+          $scope.send_control_message(new messages.MouseWheelEvent($scope.client_id, delta, deltaX, deltaY, $event.type, $event.originalEvent.metaKey, $scope.trace_id));
       }
       $scope.last_event = $event;
-      $scope.first_controller.handle_message('MouseWheel', [$event, delta, deltaX, deltaY]);
-      event.preventDefault();
+      $scope.first_channel.send('MouseWheel', [$event, delta, deltaX, deltaY]);
+      $event.preventDefault();
     };
 
-    $scope.onKeyDown = function ($event) {
-        if ($scope.recording) {
-            $scope.send_control_message(new messages.KeyEvent($scope.client_id,
-                                                              $event.key,
-                                                              $event.keyCode,
-                                                              $event.type,
-                                                              $event.altKey,
-                                                              $event.shiftKey,
-                                                              $event.ctrlKey,
-                                                              $event.metaKey));
+    // Conext Menu Button Handlers
+    $scope.removeContextMenu = function(){
+        $scope.move_controller.handle_message("Ready", {});
+        let context_menu = $scope.context_menus[0];
+        context_menu.enabled = false;
+        context_menu.x = -100000;
+        context_menu.y = -100000;
+        context_menu.buttons.forEach(function(button){
+            button.enabled = false;
+            button.x = -100000;
+            button.y = -100000;
+        });
+    };
+
+    $scope.closeDetailsPanel = function () {
+        $scope.first_channel.send('DetailsPanelClose', {});
+    };
+
+    $scope.$on('hostUpdateSaved', (e, host) => {
+        if (host.variables !== "" && $scope.selected_devices.length === 1) {
+            host.data = jsyaml.safeLoad(host.variables);
+            $scope.selected_devices[0].type = host.data.type;
         }
-        $scope.last_event = $event;
-        $scope.last_key = $event.key;
-        $scope.last_key_code = $event.keyCode;
-        $scope.first_controller.handle_message('KeyDown', $event);
-        $scope.$apply();
-        $event.preventDefault();
+    });
+
+    $scope.onDetailsContextButton = function () {
+        function emitCallback(item, canAdd){
+            $scope.first_channel.send('DetailsPanel', {});
+            $scope.removeContextMenu();
+            $scope.update_toolbox_heights();
+            $scope.$emit('showDetails', item, canAdd);
+        }
+
+        // show details for devices
+        if ($scope.selected_devices.length === 1 && $scope.selected_devices[0].host_id === 0){
+            // following block is intended for devices added in the network UI but not in Tower
+            emitCallback($scope.selected_devices[0]);
+        }
+
+        // following block is intended for devices that are saved in the API
+        if ($scope.selected_devices.length === 1 && $scope.selected_devices[0].host_id !== 0){
+            let host_id = $scope.selected_devices[0].host_id;
+            let url = `/api/v2/hosts/${host_id}/`;
+            let hostData = $http.get(url)
+                 .then(function(response) {
+                     let host = response.data;
+                     host.host_id = host.id;
+                     return host;
+                 })
+                 .catch(({data, status}) => {
+                     ProcessErrors($scope, data, status, null, { hdr: 'Error!', msg: 'Failed to get host data: ' + status });
+                 });
+            let canAdd = rbacUiControlService.canAdd('hosts')
+                    .then(function(res) {
+                        return res.canAdd;
+                    })
+                    .catch(function() {
+                        return false;
+                    });
+            Promise.all([hostData, canAdd]).then((values) => {
+                let item = values[0];
+                let canAdd = values[1];
+                emitCallback(item, canAdd);
+            });
+        }
+
+        // show details for interfaces
+        else if($scope.selected_interfaces.length === 1){
+            emitCallback($scope.selected_interfaces[0]);
+        }
+
+        // show details for links
+        else if($scope.selected_links.length === 1){
+            emitCallback($scope.selected_links[0]);
+        }
+
+        //show details for groups, racks, and sites
+        else if ($scope.selected_groups.length === 1){
+            emitCallback($scope.selected_groups[0]);
+        }
+
     };
 
-    $document.bind("keydown", $scope.onKeyDown);
+    $scope.onRenameContextButton = function () {
+        $scope.removeContextMenu();
+        $scope.first_channel.send("LabelEdit", {});
+    };
 
-    // Touch Event Handlers
-    //
+    $scope.deleteDevice = function(){
+        var i = 0;
+        var j = 0;
+        var index = -1;
+        var devices = $scope.selected_devices;
+        var links = $scope.selected_links;
+        var all_links = $scope.links.slice();
+        $scope.selected_devices = [];
+        $scope.selected_links = [];
+        $scope.move_controller.changeState(move.Ready);
+        for (i = 0; i < links.length; i++) {
+            index = $scope.links.indexOf(links[i]);
+            if (index !== -1) {
+                links[i].selected = false;
+                links[i].remote_selected = false;
+                $scope.links.splice(index, 1);
+                $scope.send_control_message(new messages.LinkDestroy($scope.client_id,
+                                                                               links[i].id,
+                                                                               links[i].from_device.id,
+                                                                               links[i].to_device.id,
+                                                                               links[i].from_interface.id,
+                                                                               links[i].to_interface.id,
+                                                                               links[i].name));
+            }
+        }
+        for (i = 0; i < devices.length; i++) {
+            index = $scope.devices.indexOf(devices[i]);
+            if (index !== -1) {
+                $scope.devices.splice(index, 1);
+                $scope.$emit('removeSearchOption', devices[i]);
+                $scope.send_control_message(new messages.DeviceDestroy($scope.client_id,
+                                                                                 devices[i].id,
+                                                                                 devices[i].x,
+                                                                                 devices[i].y,
+                                                                                 devices[i].name,
+                                                                                 devices[i].type,
+                                                                                 devices[i].host_id));
+            }
+            for (j = 0; j < all_links.length; j++) {
+                if (all_links[j].to_device === devices[i] ||
+                    all_links[j].from_device === devices[i]) {
+                    index = $scope.links.indexOf(all_links[j]);
+                    if (index !== -1) {
+                        $scope.links.splice(index, 1);
+                    }
+                }
+            }
+        }
+    };
 
-	$scope.onTouchStart = function($event) {
-     var touches = [];
-     var i = 0;
-     for (i = 0; i < $event.touches.length; i++) {
-           touches.push({screenX: $event.touches[i].screenX, screenY: $event.touches[i].screenY});
-     }
-     $scope.touches = touches;
-     if ($scope.recording) {
-          $scope.send_control_message(new messages.TouchEvent($scope.client_id, "touchstart", touches));
-     }
+    $scope.deleteGroup = function(){
+        var i = 0;
+        var index = -1;
+        var selected_groups = $scope.selected_groups;
+        $scope.selected_groups = [];
+        $scope.group_controller.changeState(group.Ready);
 
-     if ($event.touches.length === 1) {
-          $scope.cursor.hidden = false;
-          $scope.cursor.x = $event.touches[0].screenX;
-          $scope.cursor.y = $event.touches[0].screenY;
-          $scope.mouseX = $event.touches[0].screenX;
-          $scope.mouseY = $event.touches[0].screenY;
-          $scope.updateScaledXY();
-     }
-      $scope.first_controller.handle_message('TouchStart', $event);
-      $scope.onTouchStartEvent = $event;
-	  $event.preventDefault();
-	};
+        function removeSingleGroup(group){
+            index = $scope.groups.indexOf(group);
+            if (index !== -1) {
+                group.selected = false;
+                group.remote_selected = false;
+                $scope.groups.splice(index, 1);
+            }
+            $scope.send_control_message(new messages.GroupDestroy($scope.client_id,
+                                                                            group.id,
+                                                                            group.x1,
+                                                                            group.y1,
+                                                                            group.x2,
+                                                                            group.y2,
+                                                                            group.name,
+                                                                            group.group_id));
+        }
 
-	$scope.onTouchEnd = function($event) {
-     var touches = [];
-     var i = 0;
-     for (i = 0; i < $event.touches.length; i++) {
-           touches.push({screenX: $event.touches[i].screenX, screenY: $event.touches[i].screenY});
-     }
-     $scope.touches = touches;
-     if ($scope.recording) {
-          $scope.send_control_message(new messages.TouchEvent($scope.client_id, "touchend", touches));
-     }
-      $scope.first_controller.handle_message('TouchEnd', $event);
-      $scope.onTouchEndEvent = $event;
-	  $event.preventDefault();
-	};
+        if($scope.current_scale <= 0.5){
+            // current scale is in racks mode or sites mode
+            for (i = 0; i < selected_groups.length; i++) {
+                let group = selected_groups[i];
+                if(group.groups.length > 0){
+                    for(var k = 0; k < group.groups.length; k++){
+                        let nested_group = group.groups[k];
+                        removeSingleGroup(nested_group);
+                    }
+                }
+                // remove all the nested devices and links
+                $scope.selected_devices = group.devices;
+                $scope.selected_links = group.links;
+                $scope.deleteDevice();
 
-	$scope.onTouchMove = function($event) {
-     var touches = [];
-     var i = 0;
-     for (i = 0; i < $event.touches.length; i++) {
-           touches.push({screenX: $event.touches[i].screenX, screenY: $event.touches[i].screenY});
-     }
-     $scope.touches = touches;
-     if ($scope.recording) {
-          $scope.send_control_message(new messages.TouchEvent($scope.client_id, "touchmove", touches));
-     }
+                removeSingleGroup(group);
+            }
+        }
+        if($scope.current_scale > 0.5){
+            // current scale is in devices mode
+            for (i = 0; i < selected_groups.length; i++) {
+                let group = selected_groups[i];
+                removeSingleGroup(group);
+            }
+        }
+    };
 
-     if ($event.touches.length === 1) {
-          $scope.cursor.hidden = false;
-          $scope.cursor.x = $event.touches[0].screenX;
-          $scope.cursor.y = $event.touches[0].screenY;
-          $scope.mouseX = $event.touches[0].screenX;
-          $scope.mouseY = $event.touches[0].screenY;
-          $scope.updateScaledXY();
-     }
-
-      $scope.first_controller.handle_message('TouchMove', $event);
-      $scope.onTouchMoveEvent = $event;
-	  $event.preventDefault();
-	};
+    $scope.onDeleteContextMenu = function(){
+        $scope.removeContextMenu();
+        if($scope.selected_devices.length === 1){
+            $scope.deleteDevice();
+        }
+        else if($scope.selected_groups.length === 1){
+            $scope.deleteGroup();
+        }
+    };
 
     // Button Event Handlers
-    //
+    $scope.onToggleToolboxButtonLeft = function () {
+        $scope.first_channel.send("ToggleToolbox", {});
+        $scope.action_icons[0].fsm.handle_message("Disable", {});
+        $scope.action_icons[1].fsm.handle_message("Enable", {});
+        $scope.overall_toolbox_collapsed = !$scope.overall_toolbox_collapsed;
+        $scope.$emit('overall_toolbox_collapsed');
+    };
 
+    $scope.onToggleToolboxButtonRight = function () {
+        $scope.first_channel.send("ToggleToolbox", {});
+        $scope.action_icons[0].fsm.handle_message("Enable", {});
+        $scope.action_icons[1].fsm.handle_message("Disable", {});
+        $scope.overall_toolbox_collapsed = !$scope.overall_toolbox_collapsed;
+        $scope.$emit('overall_toolbox_collapsed');
+    };
 
-    $scope.onDeployButton = function (button) {
-        console.log(button.name);
+    $scope.$on('toolbarButtonEvent', function(e, functionName){
+        $scope[`on${functionName}Button`]();
+    });
+
+    $scope.$on('SearchDropdown', function(){
+        $scope.first_channel.send('SearchDropdown', {});
+    });
+
+    $scope.$on('SearchDropdownClose', function(){
+        $scope.first_channel.send('SearchDropdownClose', {});
+    });
+
+    $scope.$on('search', function(e, device){
+
+        var searched;
+        for(var i = 0; i < $scope.devices.length; i++){
+            if(Number(device.id) === $scope.devices[i].id){
+                searched = $scope.devices[i];
+            }
+        }
+        searched.selected = true;
+        $scope.selected_devices.push(searched);
+        $scope.jump_to_animation(searched.x, searched.y, 1.0);
+    });
+
+    $scope.jump_to_animation = function(jump_to_x, jump_to_y, jump_to_scale, updateZoom) {
+        $scope.cancel_animations();
+        var v_center = $scope.to_virtual_coordinates($scope.graph.width/2, $scope.graph.height/2);
+        $scope.jump.from_x = v_center.x;
+        $scope.jump.from_y = v_center.y;
+        $scope.jump.to_x = jump_to_x;
+        $scope.jump.to_y = jump_to_y;
+        var distance = util.distance(v_center.x, v_center.y, jump_to_x, jump_to_y);
+        var num_frames = 30 * Math.floor((1 + 4 * distance / (distance + 3000)));
+        var scale_animation = new models.Animation($scope.animation_id_seq(),
+                                                  num_frames,
+                                                  {
+                                                      c: -0.1,
+                                                      distance: distance,
+                                                      end_height: (1.0/jump_to_scale) - 1,
+                                                      current_scale: $scope.current_scale,
+                                                      scope: $scope,
+                                                      updateZoomBoolean: updateZoom
+                                                  },
+                                                  $scope,
+                                                  $scope,
+                                                  animations.scale_animation);
+        $scope.animations.push(scale_animation);
+        var pan_animation = new models.Animation($scope.animation_id_seq(),
+                                                  num_frames,
+                                                  {
+                                                      x2: jump_to_x,
+                                                      y2: jump_to_y,
+                                                      x1: v_center.x,
+                                                      y1: v_center.y,
+                                                      scope: $scope
+                                                  },
+                                                  $scope,
+                                                  $scope,
+                                                  animations.pan_animation);
+        $scope.animations.push(pan_animation);
+    };
+
+    $scope.$on('jumpTo', function(e, zoomLevel) {
+        var v_center = $scope.to_virtual_coordinates($scope.graph.width/2, $scope.graph.height/2);
+        switch (zoomLevel){
+            case 'site':
+                $scope.jump_to_animation(v_center.x, v_center.y, 0.051);
+                break;
+            case 'rack':
+                $scope.jump_to_animation(v_center.x, v_center.y, 0.11);
+                break;
+            case 'inventory':
+                $scope.jump_to_animation(v_center.x, v_center.y, 0.51);
+                break;
+            case 'process':
+                $scope.jump_to_animation(v_center.x, v_center.y, 5.1);
+                break;
+        }
+    });
+
+    $scope.$on('zoom', (e, zoomPercent) => {
+        let v_center = $scope.to_virtual_coordinates($scope.graph.width/2, $scope.graph.height/2);
+        let scale = Math.pow(10, (zoomPercent - 120) / 40);
+        $scope.jump_to_animation(v_center.x, v_center.y, scale, false);
+    });
+
+    $scope.onDeployButton = function () {
         $scope.send_control_message(new messages.Deploy($scope.client_id));
     };
 
-    $scope.onDestroyButton = function (button) {
-        console.log("onDestroyButton");
-        console.log(button.name);
-        $scope.resetStatus();
+    $scope.onDestroyButton = function () {
         $scope.send_control_message(new messages.Destroy($scope.client_id));
     };
 
-    $scope.onRecordButton = function (button) {
-        console.log(button.name);
+    $scope.onRecordButton = function () {
         $scope.recording = ! $scope.recording;
         if ($scope.recording) {
+            $scope.trace_id = $scope.trace_id_seq();
             $scope.send_control_message(new messages.MultipleMessage($scope.client_id,
-                                                                     [new messages.StartRecording($scope.client_id),
+                                                                     [new messages.StartRecording($scope.client_id, $scope.trace_id),
                                                                       new messages.ViewPort($scope.client_id,
                                                                                             $scope.current_scale,
                                                                                             $scope.panX,
-                                                                                            $scope.panY)]));
+                                                                                            $scope.panY,
+                                                                                            $scope.trace_id),
+                                                                      new messages.Snapshot($scope.client_id,
+                                                                                            $scope.devices,
+                                                                                            $scope.links,
+                                                                                            $scope.groups,
+                                                                                            $scope.streams,
+                                                                                            0,
+                                                                                            $scope.trace_id)]));
         } else {
-            $scope.send_control_message(new messages.StopRecording($scope.client_id));
+            $scope.send_control_message(new messages.MultipleMessage($scope.client_id,
+                                                                     [new messages.Snapshot($scope.client_id,
+                                                                                            $scope.devices,
+                                                                                            $scope.links,
+                                                                                            $scope.groups,
+                                                                                            $scope.streams,
+                                                                                            1,
+                                                                                            $scope.trace_id),
+                                                                      new messages.StopRecording($scope.client_id, $scope.trace_id)]));
         }
     };
 
-    $scope.onExportButton = function (button) {
-        console.log(button.name);
+    $scope.onExportButton = function () {
         $scope.cursor.hidden = true;
         $scope.debug.hidden = true;
         $scope.hide_buttons = true;
@@ -534,35 +1048,8 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
         }, 1000);
     };
 
-    $scope.onLayoutButton = function (button) {
-        console.log(button.name);
+    $scope.onLayoutButton = function () {
         $scope.send_control_message(new messages.Layout($scope.client_id));
-    };
-
-    $scope.onDiscoverButton = function (button) {
-        console.log(button.name);
-        var xhr = new XMLHttpRequest();
-        xhr.open("POST", "http://" + window.location.host + "/api/v1/job_templates/7/launch/", true);
-        xhr.onload = function () {
-            console.log(xhr.readyState);
-        };
-        xhr.onerror = function () {
-            console.error(xhr.statusText);
-        };
-        xhr.send();
-    };
-
-    $scope.onConfigureButton = function (button) {
-        console.log(button.name);
-        var xhr = new XMLHttpRequest();
-        xhr.open("POST", "http://" + window.location.host + "/api/v1/job_templates/9/launch/", true);
-        xhr.onload = function () {
-            console.log(xhr.readyState);
-        };
-        xhr.onerror = function () {
-            console.error(xhr.statusText);
-        };
-        xhr.send();
     };
 
     $scope.onTogglePhysical = function () {
@@ -582,96 +1069,99 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
         $scope.group_controller.changeState(group.Ready);
     };
 
-    // Buttons
 
-    $scope.buttons = [
-      new models.Button("DEPLOY", 10, 10, 70, 30, $scope.onDeployButton),
-      new models.Button("DESTROY", 90, 10, 80, 30, $scope.onDestroyButton),
-      new models.Button("RECORD", 180, 10, 80, 30, $scope.onRecordButton),
-      new models.Button("EXPORT", 270, 10, 70, 30, $scope.onExportButton),
-      new models.Button("DISCOVER", 350, 10, 80, 30, $scope.onDiscoverButton),
-      new models.Button("LAYOUT", 440, 10, 70, 30, $scope.onLayoutButton),
-      new models.Button("CONFIGURE", 520, 10, 90, 30, $scope.onConfigureButton)
+    $scope.onExportYamlButton = function () {
+        $window.open('/network_ui/topology.yaml?topology_id=' + $scope.topology_id , '_blank');
+    };
+
+    // Context Menu Buttons
+    $scope.context_menu_buttons = [
+        new models.ContextMenuButton("Rename", 210, 200, 160, 26, $scope.onRenameContextButton, $scope),
+        new models.ContextMenuButton("Details", 236, 231, 160, 26, $scope.onDetailsContextButton, $scope),
+        new models.ContextMenuButton("Delete", 256, 231, 160, 26, $scope.onDeleteContextMenu, $scope)
     ];
 
-    $scope.buttons = [];
+    // Context Menus
+    $scope.context_menus = [
+        new models.ContextMenu('HOST', 210, 200, 160, 90, $scope.contextMenuCallback, false, $scope.context_menu_buttons, $scope)
+    ];
 
-    var LAYERS_X = 160;
+    // Icons
+    var actionIconVerticalOffset = toolboxTopMargin + (toolboxHeight/2);
+    $scope.action_icons = [
+        new models.ActionIcon("chevron-left", 170, actionIconVerticalOffset, 16, $scope.onToggleToolboxButtonLeft, true, $scope),
+        new models.ActionIcon("chevron-right", 15, actionIconVerticalOffset, 16, $scope.onToggleToolboxButtonRight, false, $scope)
+    ];
 
-    $scope.layers = [
-      new models.ToggleButton("APPLICATION", $scope.graph.width - LAYERS_X, 10, 120, 30, util.noop, util.noop, true),
-      new models.ToggleButton("PRESENTATION", $scope.graph.width - LAYERS_X, 50, 120, 30, util.noop, util.noop, true),
-      new models.ToggleButton("SESSION", $scope.graph.width - LAYERS_X, 90, 120, 30, util.noop, util.noop, true),
-      new models.ToggleButton("TRANSPORT", $scope.graph.width - LAYERS_X, 130, 120, 30, util.noop, util.noop, true),
-      new models.ToggleButton("NETWORK", $scope.graph.width - LAYERS_X, 170, 120, 30, util.noop, util.noop, true),
-      new models.ToggleButton("DATA-LINK", $scope.graph.width - LAYERS_X, 210, 120, 30, util.noop, util.noop, true),
-      new models.ToggleButton("PHYSICAL",
-                              $scope.graph.width - LAYERS_X, 250, 120, 30,
-                              $scope.onTogglePhysical,
-                              $scope.onUnTogglePhysical,
-                              true),
-      new models.ToggleButton("GROUP",
-                              $scope.graph.width - LAYERS_X, 290, 120, 30,
-                              $scope.onToggleGroup,
-                              $scope.onUnToggleGroup,
-                              true)
+    $scope.onDownloadTraceButton = function () {
+        window.open("/network_ui/download_trace?topology_id=" + $scope.topology_id + "&trace_id=" + $scope.trace_id + "&client_id=" + $scope.client_id);
+    };
+
+    $scope.onDownloadRecordingButton = function () {
+        window.open("/network_ui/download_recording?topology_id=" + $scope.topology_id + "&trace_id=" + $scope.trace_id + "&client_id=" + $scope.client_id);
+    };
+
+    $scope.onUploadTestButton = function () {
+        window.open("/network_ui/upload_test", "_top");
+    };
+
+    $scope.onRunTestsButton = function () {
+
+        $scope.test_results = [];
+        $scope.current_tests = $scope.tests.slice();
+        $scope.first_channel.send("EnableTest", new messages.EnableTest());
+    };
+
+    $scope.onCompileVariablesButton = function () {
+
+
+        function noop (response) {
+            console.log(response);
+        }
+
+        function error_handler (response) {
+
+            console.log(response);
+        }
+
+        var i = 0;
+        var variables = null;
+        for(i = 0; i < $scope.devices.length; i++) {
+            variables = $scope.devices[i].compile_variables();
+            if ($scope.devices[i].host_id !== 0) {
+                $http.put('/api/v2/hosts/' + $scope.devices[i].host_id + '/variable_data/', JSON.stringify(variables)).then(noop).catch(error_handler);
+            }
+        }
+
+        for(i = 0; i < $scope.groups.length; i++) {
+            variables = $scope.groups[i].compile_variables();
+            if ($scope.groups[i].group_id !== 0) {
+                $http.put('/api/v2/groups/' + $scope.groups[i].group_id + '/variable_data/', JSON.stringify(variables)).then(noop).catch(error_handler);
+            }
+
+        }
+    };
+
+
+    $scope.buttons = [
+      // new models.Button("DEPLOY", button_offset + 10, 48, 70, 30, $scope.onDeployButton, $scope),
+      // new models.Button("DESTROY", button_offset + 90, 48, 80, 30, $scope.onDestroyButton, $scope),
+      // new models.Button("RECORD", button_offset + 180, 48, 80, 30, $scope.onRecordButton, $scope),
+      // new models.Button("EXPORT", button_offset + 270, 48, 70, 30, $scope.onExportButton, $scope),
+      // new models.Button("DISCOVER", button_offset + 350, 48, 80, 30, $scope.onDiscoverButton, $scope),
+      // new models.Button("LAYOUT", button_offset + 440, 48, 70, 30, $scope.onLayoutButton, $scope),
+      // new models.Button("CONFIGURE", button_offset + 520, 48, 90, 30, $scope.onConfigureButton, $scope),
+      // new models.Button("EXPORT YAML", button_offset + 620, 48, 120, 30, $scope.onExportYamlButton, $scope),
+      // new models.Button("DOWNLOAD TRACE", button_offset + 750, 48, 150, 30, $scope.onDownloadTraceButton, $scope),
+      // new models.Button("DOWNLOAD RECORDING", button_offset + 910, 48, 170, 30, $scope.onDownloadRecordingButton, $scope),
+      // new models.Button("UPLOAD TEST", button_offset + 10, 88, 100, 30, $scope.onUploadTestButton, $scope),
+      // new models.Button("RUN TESTS", button_offset + 120, 88, 100, 30, $scope.onRunTestsButton, $scope),
     ];
 
     $scope.all_buttons = [];
+    $scope.all_buttons.extend($scope.context_menu_buttons);
+    $scope.all_buttons.extend($scope.action_icons);
     $scope.all_buttons.extend($scope.buttons);
-    $scope.all_buttons.extend($scope.layers);
-
-    $scope.onTaskStatus = function(data) {
-        console.log(['onTaskStatus', data]);
-        var i = 0;
-        var j = 0;
-        var found = false;
-        for (i = 0; i < $scope.devices.length; i++) {
-            if ($scope.devices[i].name === data.device_name) {
-                found = false;
-                for (j = 0; j < $scope.devices[i].tasks.length; j++) {
-                    if ($scope.devices[i].tasks[j].id === data.task_id) {
-                        found = true;
-                    }
-                }
-                if (!found) {
-                    $scope.devices[i].tasks.push(new models.Task(data.task_id,
-                                                                 data.device_name));
-                }
-                for (j = 0; j < $scope.devices[i].tasks.length; j++) {
-                    if ($scope.devices[i].tasks[j].id === data.task_id) {
-                        if (data.status !== null) {
-                            $scope.devices[i].tasks[j].status = data.status === "pass";
-                        }
-                        if (data.working !== null) {
-                            $scope.devices[i].tasks[j].working = data.working;
-                        }
-                    }
-                }
-                if (data.status !== null) {
-                    $scope.devices[i].status = data.status === "pass";
-                }
-                if (data.working !== null) {
-                    $scope.devices[i].working = data.working;
-                }
-            }
-        }
-    };
-
-    $scope.onDeviceStatus = function(data) {
-        console.log(['onDeviceStatus', data]);
-        var i = 0;
-        for (i = 0; i < $scope.devices.length; i++) {
-            if ($scope.devices[i].name === data.name) {
-                if (data.status !== null) {
-                    $scope.devices[i].status = data.status === "pass";
-                }
-                if (data.working !== null) {
-                    $scope.devices[i].working = data.working;
-                }
-            }
-        }
-    };
 
     $scope.onFacts = function(data) {
         var i = 0;
@@ -736,6 +1226,7 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
         return null;
     };
 
+
     $scope.getDeviceInterface = function(device_name, interface_name) {
 
         var i = 0;
@@ -752,16 +1243,163 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
         return null;
     };
 
+    $scope.create_template_sequences = function (sequences, template, template_context) {
+        var i = 0;
+        var template_variables  = util.nunjucks_find_variables(template);
+        for (i = 0; i < template_variables.length; i++) {
+            if (template_context[template_variables[i]] === undefined) {
+                if (sequences[template_variables[i]] === undefined) {
+                    sequences[template_variables[i]] = util.natural_numbers(0);
+                }
+                template_context[template_variables[i]] = sequences[template_variables[i]]();
+            }
+        }
+    };
+
+    $scope.create_inventory_host = function (device) {
+        if ($scope.template_building || device.template) {
+            return;
+        }
+        console.log(device);
+
+        function update_inventory () {
+            HostsService.post({inventory: $scope.inventory_id,
+                               name: device.name,
+                               variables: JSON.stringify({awx: {name: device.name,
+                                                                type: device.type}})})
+                        .then(function (res) {
+                            console.log(res);
+                            device.host_id = res.data.id;
+                            device.variables = util.parse_variables(res.data.variables);
+                            $scope.send_control_message(new messages.DeviceInventoryUpdate($scope.client_id,
+                                                                                           device.id,
+                                                                                           device.host_id));
+                        })
+                        .catch(function (res) {
+                            console.log(res);
+                        });
+        }
+
+        return HostsService.get({inventory: $scope.inventory_id,
+                          name: device.name})
+                    .then(function (res) {
+                        console.log(res);
+                        if (res.data.count === 0) {
+                            update_inventory();
+                        } else if (res.data.count === 1) {
+                            device.host_id = res.data.results[0].id;
+                            device.variables = util.parse_variables(res.data.results[0].variables);
+                            $scope.send_control_message(new messages.DeviceInventoryUpdate($scope.client_id,
+                                                                                           device.id,
+                                                                                           device.host_id));
+                        }
+                    })
+                    .catch(function (res) {
+                        console.log(res);
+                    });
+
+    };
+
+    $scope.create_inventory_group = function (group) {
+        if ($scope.template_building || group.template) {
+            return;
+        }
+        console.log(group);
+        function update_inventory () {
+            GroupsService.post({inventory: $scope.inventory_id,
+                               name: group.name,
+                               variables: JSON.stringify({awx: {name: group.name,
+                                                                type: group.type}})})
+                        .then(function (res) {
+                            console.log(res);
+                            group.group_id = res.data.id;
+                            group.variables = util.parse_variables(res.data.variables);
+                            $scope.send_control_message(new messages.GroupInventoryUpdate($scope.client_id,
+                                                                                          group.id,
+                                                                                          group.group_id));
+                        })
+                        .catch(function (res) {
+                            console.log(res);
+                        });
+        }
+        return GroupsService.get({inventory: $scope.inventory_id,
+                          name: group.name})
+                    .then(function (res) {
+                        console.log(res);
+                        if (res.data.count === 0) {
+                            update_inventory();
+                        } else if (res.data.count === 1) {
+                            group.group_id = res.data.results[0].id;
+                            group.variables = util.parse_variables(res.data.results[0].variables);
+                            $scope.send_control_message(new messages.GroupInventoryUpdate($scope.client_id,
+                                                                                          group.id,
+                                                                                          group.group_id));
+                        }
+                    })
+                    .catch(function (res) {
+                        console.log(res);
+                    });
+
+    };
+
+    $scope.create_group_association = function (group, devices) {
+        if ($scope.template_building || group.template) {
+            return;
+        }
+
+        console.log(['create_group_association', group, devices]);
+
+        function noop (response) {
+            console.log(response);
+        }
+
+        function error_handler (response) {
+            console.log(response);
+        }
+
+        var i = 0;
+        for (i = 0; i < devices.length; i ++) {
+            if (!devices[i].template) {
+                $http.post('/api/v2/groups/' + group.group_id + '/hosts/', JSON.stringify({name: devices[i].name})).then(noop).catch(error_handler);
+            }
+        }
+    };
+
+    $scope.delete_group_association = function (group, devices) {
+        if ($scope.template_building || group.template) {
+            return;
+        }
+
+        console.log(['delete_group_association', group, devices]);
+
+        function noop (response) {
+            console.log(response);
+        }
+
+        function error_handler (response) {
+            console.log(response);
+        }
+
+        var i = 0;
+        for (i = 0; i < devices.length; i ++) {
+            if (!devices[i].template) {
+                GroupsService.disassociateHost(devices[i].host_id, group.group_id).then(noop).catch(error_handler);
+            }
+        }
+    };
+
     $scope.onDeviceCreate = function(data) {
         $scope.create_device(data);
     };
 
     $scope.create_device = function(data) {
+        console.log(data);
         var device = new models.Device(data.id,
                                        data.name,
                                        data.x,
                                        data.y,
-                                       data.type);
+                                       data.type,
+                                       data.host_id);
         $scope.device_id_seq = util.natural_numbers(data.id);
         $scope.devices.push(device);
     };
@@ -781,6 +1419,18 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
                                      false);
         $scope.group_id_seq = util.natural_numbers(data.id);
         $scope.groups.push(group);
+    };
+
+    $scope.breadcrumbGroups = function(){
+        let breadcrumbGroups = [];
+        for(var i = 0; i < $scope.groups.length; i++){
+            let group = $scope.groups[i];
+            if(group.is_in_breadcrumb($scope.view_port)){
+                group.distance = util.distance(group.x1, group.y1, group.x2, group.y2);
+                breadcrumbGroups.push(group);
+            }
+        }
+        return breadcrumbGroups;
     };
 
     $scope.forDevice = function(device_id, data, fn) {
@@ -844,9 +1494,7 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
 
     $scope.create_interface = function(data) {
         var i = 0;
-        console.log(data);
         var new_interface = new models.Interface(data.id, data.name);
-        console.log(new_interface);
         for (i = 0; i < $scope.devices.length; i++){
             if ($scope.devices[i].id === data.device_id) {
                 $scope.devices[i].interface_seq = util.natural_numbers(data.id);
@@ -996,7 +1644,6 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
         }
     };
 
-
     $scope.onGroupLabelEdit = function(data) {
         $scope.edit_group_label(data);
     };
@@ -1059,7 +1706,8 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
                                                       data.previous_x,
                                                       data.previous_y,
                                                       data.previous_name,
-                                                      data.previous_type);
+                                                      data.previous_type,
+                                                      data.previous_host_id);
             $scope.create_device(inverted_data);
         }
 
@@ -1080,6 +1728,7 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
 
     $scope.onClientId = function(data) {
         $scope.client_id = data;
+        $scope.send_initial_messages();
     };
 
     $scope.onTopology = function(data) {
@@ -1087,10 +1736,10 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
         $scope.panX = data.panX;
         $scope.panY = data.panX;
         $scope.current_scale = data.scale;
+        $scope.$emit('awxNet-UpdateZoomWidget', $scope.current_scale, true);
         $scope.link_id_seq = util.natural_numbers(data.link_id_seq);
         $scope.group_id_seq = util.natural_numbers(data.group_id_seq);
         $scope.device_id_seq = util.natural_numbers(data.device_id_seq);
-        $location.search({topology_id: data.topology_id, inventory_id: $scope.inventory_id});
     };
 
     $scope.onDeviceSelected = function(data) {
@@ -1122,8 +1771,7 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
 
     $scope.onToolboxItem = function (data) {
         if (data.toolbox_name === "Site") {
-            var site = JSON.parse(data.data);
-            console.log(site);
+            var site = util.parse_variables(data.data);
             var i = 0;
             var j = 0;
             var site_copy = new models.Group(site.id,
@@ -1166,7 +1814,6 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
                     device_copy.processes.push(process_copy);
                 }
             }
-            console.log(device_map);
             var group, group_copy;
             for (i = 0; i < site.groups.length; i++) {
                 group = site.groups[i];
@@ -1213,6 +1860,8 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
         //Erase the existing state
         $scope.devices = [];
         $scope.links = [];
+        $scope.groups = [];
+        $scope.streams = [];
 
         var device_map = {};
         var device_interface_map = {};
@@ -1258,7 +1907,15 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
                                            device.name,
                                            device.x,
                                            device.y,
-                                           device.type);
+                                           device.device_type,
+                                           device.host_id);
+
+            for (j=0; j < $scope.inventory_toolbox.items.length; j++) {
+                 if($scope.inventory_toolbox.items[j].name === device.name) {
+                     $scope.inventory_toolbox.items.splice(j, 1);
+                     break;
+                 }
+            }
             new_device.interface_seq = util.natural_numbers(device.interface_id_seq);
             new_device.process_id_seq = util.natural_numbers(device.process_id_seq);
             $scope.devices.push(new_device);
@@ -1268,17 +1925,17 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
                 process = device.processes[j];
                 new_process = (new models.Process(process.id,
                                                   process.name,
-                                                  process.type,
+                                                  process.process_type,
                                                   0,
                                                   0));
-				new_process.device = new_device;
+                new_process.device = new_device;
                 new_device.processes.push(new_process);
             }
             for (j = 0; j < device.interfaces.length; j++) {
                 intf = device.interfaces[j];
                 new_intf = (new models.Interface(intf.id,
                                                  intf.name));
-				new_intf.device = new_device;
+                new_intf.device = new_device;
                 device_interface_map[device.id][intf.id] = new_intf;
                 new_device.interfaces.push(new_intf);
             }
@@ -1325,12 +1982,13 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
             }
             new_group = new models.Group(group.id,
                                          group.name,
-                                         group.type,
+                                         group.group_type,
                                          group.x1,
                                          group.y1,
                                          group.x2,
                                          group.y2,
                                          false);
+            new_group.group_id = group.inventory_group_id;
             if (group.members !== undefined) {
                 for (j=0; j < group.members.length; j++) {
                     new_group.devices.push(device_map[group.members[j]]);
@@ -1354,6 +2012,7 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
             diff_y = max_y - min_y;
 
             $scope.current_scale = Math.min(2, Math.max(0.10, Math.min((window.innerWidth-200)/diff_x, (window.innerHeight-300)/diff_y)));
+            $scope.$emit('awxNet-UpdateZoomWidget', $scope.current_scale, true);
             $scope.updateScaledXY();
             $scope.updatePanAndScale();
         }
@@ -1386,6 +2045,38 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
         }
 
         $scope.updateInterfaceDots();
+        $scope.$emit('instatiateSelect', $scope.devices);
+        $scope.$emit('awxNet-breadcrumbGroups', $scope.breadcrumbGroups());
+        $scope.update_device_variables();
+    };
+
+    $scope.update_device_variables = function () {
+
+      var hosts_by_id = {};
+      var i = 0;
+      for (i = 0; i < $scope.devices.length; i++) {
+          hosts_by_id[$scope.devices[i].host_id] = $scope.devices[i];
+      }
+
+      $http.get('/api/v2/inventories/' + $scope.inventory_id + '/hosts/')
+           .then(function(response) {
+               let hosts = response.data.results;
+               for(var i = 0; i<hosts.length; i++){
+                   try {
+                       let host = hosts[i];
+                       if (hosts_by_id[host.id] !== undefined) {
+                           hosts_by_id[host.id].variables = util.parse_variables(host.variables);
+                       }
+                   } catch (error) {
+                       console.log(error);
+                   }
+               }
+           })
+           .catch(({data, status}) => {
+               console.log([data, status]);
+               ProcessErrors($scope, data, status, null, { hdr: 'Error!', msg: 'Failed to get host data: ' + status });
+           });
+
     };
 
     $scope.updateInterfaceDots = function() {
@@ -1399,45 +2090,33 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
         }
     };
 
-    $scope.resetStatus = function() {
-        var i = 0;
-        var j = 0;
-        var devices = $scope.devices;
-        var links = $scope.links;
-        for (i = 0; i < devices.length; i++) {
-            devices[i].status = null;
-            devices[i].working = false;
-            devices[i].tasks = [];
-            for (j = devices[i].interfaces.length - 1; j >= 0; j--) {
-                devices[i].interfaces[j].status = null;
-            }
-        }
-        for (i = 0; i < links.length; i++) {
-            links[i].status = null;
-        }
-    };
-
-    $scope.send_coverage = function () {
-        console.log("Sending coverage");
-        if (typeof(window.__coverage__) !== "undefined" && window.__coverage__ !== null) {
-            $scope.send_control_message(new messages.Coverage($scope.client_id, window.__coverage__));
-        }
-    };
-
-
     $scope.control_socket.onmessage = function(message) {
-        $scope.first_controller.handle_message('Message', message);
+        $scope.first_channel.send('Message', message);
         $scope.$apply();
     };
 
-	$scope.control_socket.onopen = function() {
-        //Ignore
-	};
+    $scope.control_socket.onopen = function() {
+        //ignore
+    };
 
-	// Call onopen directly if $scope.control_socket is already open
-	if ($scope.control_socket.readyState === WebSocket.OPEN) {
-		$scope.control_socket.onopen();
-	}
+    $scope.send_initial_messages = function() {
+        var i = 0;
+        var messages_to_send = $scope.initial_messages;
+        var message = null;
+        var data = null;
+        $scope.initial_messages = [];
+        for(i = 0; i < messages_to_send.length; i++) {
+            message = messages_to_send[i];
+            message.sender = $scope.client_id;
+            data = messages.serialize(message);
+            $scope.control_socket.send(data);
+        }
+    };
+
+    // Call onopen directly if $scope.control_socket is already open
+    if ($scope.control_socket.readyState === WebSocket.OPEN) {
+        $scope.control_socket.onopen();
+    }
 
     $scope.send_control_message = function (message) {
         var i = 0;
@@ -1451,8 +2130,6 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
         var data = messages.serialize(message);
         if (!$scope.disconnected) {
             $scope.control_socket.send(data);
-        } else {
-            console.log(data);
         }
     };
 
@@ -1460,17 +2137,17 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
     // End web socket
     //
 
-	angular.element($window).bind('resize', function(){
+    angular.element($window).bind('resize', function(){
 
-		$scope.graph.width = $window.innerWidth;
-	  	$scope.graph.right_column = $window.innerWidth - 300;
-	  	$scope.graph.height = $window.innerHeight;
+        $scope.graph.width = $window.innerWidth;
+        $scope.graph.right_column = 300;
+        $scope.graph.height = $window.innerHeight;
 
         $scope.update_size();
 
-		// manuall $digest required as resize event
-		// is outside of angular
-	 	$scope.$digest();
+        // manuall $digest required as resize event
+        // is outside of angular
+        $scope.$digest();
     });
 
     //60fps ~ 17ms delay
@@ -1483,14 +2160,32 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
 
     $scope.$on('$destroy', function () {
         console.log("Network UI stopping");
-        $document.unbind('keydown', $scope.onKeyDown);
+        $scope.first_channel.send('UnbindDocument', {});
     });
 
+    $scope.update_toolbox_heights = function(){
+        toolboxTopMargin = $('.Networking-top').height();
+        toolboxTitleMargin = toolboxTopMargin + 35;
+        toolboxHeight = $scope.graph.height - toolboxTopMargin;
+
+        let toolboxes = ['site_toolbox', 'rack_toolbox', 'inventory_toolbox', 'app_toolbox'];
+        toolboxes.forEach((toolbox) => {
+            $scope[toolbox].y = toolboxTopMargin;
+            $scope[toolbox].height = toolboxHeight;
+            $scope[toolbox].title_coordinates.y = toolboxTitleMargin;
+        });
+
+        $scope.action_icons.forEach((icon) => {
+            actionIconVerticalOffset = toolboxTopMargin + (toolboxHeight/2);
+            icon.y = actionIconVerticalOffset;
+        });
+
+        $('.Networking-detailPanel').height(toolboxHeight);
+        $('.Networking-detailPanel').css('top', toolboxTopMargin);
+    };
+
     $scope.update_size = function () {
-        var i = 0;
-        for (i = 0; i < $scope.layers.length; i++) {
-            $scope.layers[i].x = $scope.graph.width - 140;
-        }
+        $scope.update_toolbox_heights();
     };
 
     $scope.update_offsets = function () {
@@ -1511,6 +2206,125 @@ var NetworkUIController = function($scope, $document, $location, $window, $http)
             stream.offset = map.get(key);
             map.set(key, stream.offset + 1);
         }
+    };
+
+    setInterval( function () {
+        var test_event = null;
+        if ($scope.test_events.length  > 0) {
+            test_event = $scope.test_events.shift();
+            test_event.sender = 0;
+            try {
+                $scope.first_channel.send(test_event.msg_type, test_event);
+            } catch (err) {
+                console.log(["Test Error:", $scope.current_test, err]);
+                $scope.test_errors.push(err);
+            }
+        }
+        $scope.$apply();
+    }, 10);
+
+    ConfigService
+        .getConfig()
+        .then(function(config){
+            $scope.version = config.version;
+        });
+
+    $scope.reset_coverage = function() {
+        var i = null;
+        var coverage = null;
+        var f = null;
+        if (typeof(window.__coverage__) !== "undefined" && window.__coverage__ !== null) {
+            for (f in window.__coverage__) {
+                coverage = window.__coverage__[f];
+                for (i in coverage.b) {
+                    coverage.b[i] = [0, 0];
+                }
+                for (i in coverage.f) {
+                    coverage.f[i] = 0;
+                }
+                for (i in coverage.s) {
+                    coverage.s[i] = 0;
+                }
+            }
+        }
+    };
+
+    $scope.reset_flags = function () {
+      $scope.debug = {'hidden': true};
+      $scope.hide_buttons = false;
+      $scope.hide_links = false;
+      $scope.hide_interfaces = false;
+      $scope.hide_groups = false;
+    };
+
+
+    $scope.reset_fsm_state = function () {
+        $scope.null_controller.state = null_fsm.Start;
+        $scope.null_controller.state.start($scope.null_controller);
+        $scope.hotkeys_controller.state = hotkeys.Start;
+        $scope.hotkeys_controller.state.start($scope.hotkeys_controller);
+        $scope.keybindings_controller.state = keybindings.Start;
+        $scope.keybindings_controller.state.start($scope.keybindings_controller);
+        $scope.view_controller.state = view.Start;
+        $scope.view_controller.state.start($scope.view_controller);
+        $scope.device_detail_controller.state = device_detail_fsm.Start;
+        $scope.device_detail_controller.state.start($scope.device_detail_controller);
+        $scope.move_controller.state = move.Start;
+        $scope.move_controller.state.start($scope.move_controller);
+        $scope.details_panel_controller.state = details_panel_fsm.Start;
+        $scope.details_panel_controller.state.start($scope.details_panel_controller);
+        $scope.link_controller.state = link.Start;
+        $scope.link_controller.state.start($scope.link_controller);
+        $scope.stream_controller.state = stream_fsm.Start;
+        $scope.stream_controller.state.start($scope.stream_controller);
+        $scope.group_controller.state = group.Start;
+        $scope.group_controller.state.start($scope.group_controller);
+        $scope.rack_controller.state = rack_fsm.Disable;
+        $scope.rack_controller.state.start($scope.rack_controller);
+        $scope.site_controller.state = site_fsm.Disable;
+        $scope.site_controller.state.start($scope.site_controller);
+        $scope.buttons_controller.state = buttons.Start;
+        $scope.buttons_controller.state.start($scope.buttons_controller);
+        $scope.time_controller.state = time.Start;
+        $scope.time_controller.state.start($scope.time_controller);
+        $scope.app_toolbox_controller.state = toolbox_fsm.Start;
+        $scope.app_toolbox_controller.state.start($scope.app_toolbox_controller);
+        $scope.inventory_toolbox_controller.state = toolbox_fsm.Start;
+        $scope.inventory_toolbox_controller.state.start($scope.inventory_toolbox_controller);
+        $scope.rack_toolbox_controller.state = toolbox_fsm.Start;
+        $scope.rack_toolbox_controller.state.start($scope.rack_toolbox_controller);
+        $scope.site_toolbox_controller.state = toolbox_fsm.Start;
+        $scope.site_toolbox_controller.state.start($scope.site_toolbox_controller);
+        $scope.mode_controller.state = mode_fsm.Start;
+        $scope.mode_controller.state.start($scope.mode_controller);
+    };
+
+    $scope.reset_history =  function () {
+        $scope.history = [];
+    };
+
+    $scope.reset_toolboxes = function () {
+        $scope.app_toolbox.items = [];
+        $scope.app_toolbox.items.push(new models.Process(0, 'BGP', 'process', 0, 0));
+        $scope.app_toolbox.items.push(new models.Process(0, 'OSPF', 'process', 0, 0));
+        $scope.app_toolbox.items.push(new models.Process(0, 'STP', 'process', 0, 0));
+        $scope.app_toolbox.items.push(new models.Process(0, 'Zero Pipeline', 'process', 0, 0));
+
+        for(i = 0; i < $scope.app_toolbox.items.length; i++) {
+            $scope.app_toolbox.items[i].icon = true;
+        }
+        $scope.inventory_toolbox.items = [];
+        $scope.rack_toolbox.items = [];
+        $scope.site_toolbox.items = [];
+    };
+
+    $scope.cancel_animations = function () {
+
+        var i = 0;
+        for (i = 0; i < $scope.animations.length; i++) {
+            this.animations[i].fsm.handle_message('AnimationCancelled');
+        }
+        $scope.animations = [];
     };
 };
 

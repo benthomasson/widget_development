@@ -1,16 +1,19 @@
+/* Copyright (c) 2017-2018 Red Hat, Inc. */
 var fsm = require('./fsm.js');
-var button = require('./button.js');
+var button = require('./button.fsm.js');
 var util = require('./util.js');
 var inherits = require('inherits');
+var animation_fsm = require('./animation.fsm.js');
 
-function Device(id, name, x, y, type) {
+function Device(id, name, x, y, type, host_id) {
     this.id = id;
+    this.host_id = host_id ? host_id: 0;
     this.name = name;
     this.x = x;
     this.y = y;
-    this.height = type === "host" ? 15 : 50;
-    this.width = 50;
-    this.size = 50;
+    this.height = type === "host" ? 20 : 37.5;
+    this.width = 37.5;
+    this.size = 37.5;
     this.type = type;
     this.selected = false;
     this.remote_selected = false;
@@ -25,6 +28,9 @@ function Device(id, name, x, y, type) {
     this.interfaces = [];
     this.process_id_seq = util.natural_numbers(0);
     this.processes = [];
+    this.in_group = false;
+    this.template = false;
+    this.variables = {};
 }
 exports.Device = Device;
 
@@ -34,8 +40,12 @@ Device.prototype.toJSON = function () {
             x: this.x,
             y: this.y,
             type: this.type,
-            interfaces: this.interfaces,
-            processes: this.processes};
+            interfaces: this.interfaces.map(function (x) {
+                return x.toJSON();
+            }),
+            processes: this.processes.map(function (x) {
+                return x.toJSON();
+            })};
 };
 
 Device.prototype.is_selected = function (x, y) {
@@ -49,6 +59,29 @@ Device.prototype.is_selected = function (x, y) {
 
 Device.prototype.describeArc = util.describeArc;
 
+
+Device.prototype.compile_variables = function () {
+    var variables = JSON.parse(JSON.stringify(this.variables));
+    var awx_variables = {};
+    variables.awx = awx_variables;
+    awx_variables.name = this.name;
+    awx_variables.type = this.type;
+    awx_variables.interfaces = [];
+    var i = 0;
+    var intf = null;
+    for (i = 0; i < this.interfaces.length; i++) {
+        intf = {name: this.interfaces[i].name,
+                id: this.interfaces[i].id};
+        if (this.interfaces[i].link !== null) {
+            intf.link_id = this.interfaces[i].link.id;
+            intf.link_name = this.interfaces[i].link.name;
+            intf.remote_interface_name = this.interfaces[i].remote_interface().name;
+            intf.remote_device_name = this.interfaces[i].remote_interface().device.name;
+        }
+        awx_variables.interfaces.push(intf);
+    }
+    return variables;
+};
 
 function Interface(id, name) {
     this.id = id;
@@ -288,8 +321,29 @@ Link.prototype.plength = function (x, y) {
     return util.pDistance(x, y, x1, y1, x2, y2);
 };
 
+function ActionIcon(name, x, y, r, callback, enabled, tracer) {
+    this.name = name;
+    this.x = x;
+    this.y = y;
+    this.r = r;
+    this.callback = callback;
+    this.is_pressed = false;
+    this.mouse_over = false;
+    this.enabled = enabled;
+    this.fsm = new fsm.FSMController(this, "button_fsm", enabled ? button.Start : button.Disabled, tracer);
+}
+exports.ActionIcon = ActionIcon;
 
-function Button(name, x, y, width, height, callback) {
+ActionIcon.prototype.is_selected = function (x, y) {
+
+    return (x > this.x - this.r &&
+            x < this.x + this.r &&
+            y > this.y - this.r &&
+            y < this.y + this.r);
+
+};
+
+function Button(name, x, y, width, height, callback, tracer) {
     this.name = name;
     this.x = x;
     this.y = y;
@@ -298,7 +352,8 @@ function Button(name, x, y, width, height, callback) {
     this.callback = callback;
     this.is_pressed = false;
     this.mouse_over = false;
-    this.fsm = new fsm.FSMController(this, button.Start, null);
+    this.enabled = true;
+    this.fsm = new fsm.FSMController(this, "button_fsm", button.Start, tracer);
 }
 exports.Button = Button;
 
@@ -313,7 +368,7 @@ Button.prototype.is_selected = function (x, y) {
 };
 
 
-function ToggleButton(name, x, y, width, height, toggle_callback, untoggle_callback, default_toggled) {
+function ToggleButton(name, x, y, width, height, toggle_callback, untoggle_callback, default_toggled, tracer) {
     this.name = name;
     this.x = x;
     this.y = y;
@@ -325,7 +380,8 @@ function ToggleButton(name, x, y, width, height, toggle_callback, untoggle_callb
     this.toggle_callback = toggle_callback;
     this.untoggle_callback = untoggle_callback;
     this.mouse_over = false;
-    this.fsm = new fsm.FSMController(this, button.Start, null);
+    this.enabled = true;
+    this.fsm = new fsm.FSMController(this, "button_fsm", button.Start, tracer);
 }
 inherits(ToggleButton, Button);
 exports.ToggleButton = ToggleButton;
@@ -341,16 +397,54 @@ ToggleButton.prototype.toggle = function () {
     }
 };
 
-
-function Task(id, name) {
-    this.id = id;
+function ContextMenu(name, x, y, width, height, callback, enabled, buttons, tracer) {
     this.name = name;
-    this.status = null;
-    this.working = null;
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
+    this.callback = callback;
+    this.is_pressed = false;
+    this.mouse_over = false;
+    this.enabled = false;
+    this.buttons = buttons;
+    this.fsm = new fsm.FSMController(this, "button_fsm", enabled ? button.Start : button.Disabled, tracer);
 }
-exports.Task = Task;
+exports.ContextMenu = ContextMenu;
 
-Task.prototype.describeArc = util.describeArc;
+
+ContextMenu.prototype.is_selected = function (x, y) {
+
+    return (x > this.x &&
+            x < this.x + this.width &&
+            y > this.y &&
+            y < this.y + this.height);
+
+};
+
+function ContextMenuButton(name, x, y, width, height, callback, tracer) {
+    this.name = name;
+    this.x = x;
+    this.y = y;
+    this.width = width;
+    this.height = height;
+    this.callback = callback;
+    this.is_pressed = false;
+    this.mouse_over = false;
+    this.enabled = true;
+    this.fsm = new fsm.FSMController(this, "button_fsm", button.Start, tracer);
+}
+exports.ContextMenuButton = ContextMenuButton;
+
+
+ContextMenuButton.prototype.is_selected = function (x, y) {
+
+    return (x > this.x &&
+            x < this.x + this.width &&
+            y > this.y &&
+            y < this.y + this.height);
+
+};
 
 
 function Group(id, name, type, x1, y1, x2, y2, selected) {
@@ -370,9 +464,19 @@ function Group(id, name, type, x1, y1, x2, y2, selected) {
     this.links = [];
     this.groups = [];
     this.streams = [];
+    this.group_id = 0;
     this.icon_size = type === 'site' ? 500 : 100;
+    this.template = false;
+    this.variables = {};
+    this.sequences = {};
 }
 exports.Group = Group;
+
+Group.prototype.compile_variables = function () {
+
+    var variables = JSON.parse(JSON.stringify(this.variables));
+    return variables;
+};
 
 Group.prototype.toJSON = function () {
 
@@ -454,18 +558,6 @@ Group.prototype.has_corner_selected = function (x, y) {
     }
 
     return false;
-};
-
-Group.prototype.corners = function () {
-
-    return [{x: this.left_extent(),
-             y: this.top_extent()},
-            {x: this.right_extent(),
-             y: this.top_extent()},
-            {x: this.left_extent(),
-             y: this.bottom_extent()},
-            {x: this.left_extent(),
-             y: this.bottom_extent()}];
 };
 
 Group.prototype.select_corner = function (x, y) {
@@ -577,15 +669,25 @@ Group.prototype.update_membership = function (devices, groups) {
     var y2 = this.bottom_extent();
     var x2 = this.right_extent();
     var old_devices = this.devices;
+    var new_devices = [];
+    var removed_devices = old_devices.slice();
     var device_ids = [];
+    var index = -1;
     this.devices = [];
     for (i = 0; i < devices.length; i++) {
         if (devices[i].x > x1 &&
             devices[i].y > y1 &&
             devices[i].x < x2 &&
             devices[i].y < y2) {
+            devices[i].in_group = true;
             this.devices.push(devices[i]);
             device_ids.push(devices[i].id);
+            index = removed_devices.indexOf(devices[i]);
+            if (index !== -1) {
+                removed_devices.splice(index, 1);
+            } else {
+                new_devices.push(devices[i]);
+            }
         }
     }
     var old_groups = this.groups;
@@ -600,7 +702,30 @@ Group.prototype.update_membership = function (devices, groups) {
             group_ids.push(groups[i].id);
         }
     }
-    return [old_devices, this.devices, device_ids, old_groups, this.groups, group_ids];
+    return [old_devices, this.devices, device_ids, old_groups, this.groups, group_ids, new_devices, removed_devices];
+};
+
+Group.prototype.is_in_breadcrumb = function(viewport){
+    var groupY1 = this.top_extent();
+    var groupX1 = this.left_extent();
+    var groupY2 = this.bottom_extent();
+    var groupX2 = this.right_extent();
+
+    var viewportY1 = viewport.top_extent();
+    var viewportX1 = viewport.left_extent();
+    var viewportY2 = viewport.bottom_extent();
+    var viewportX2 = viewport.right_extent();
+
+    if (viewportX1 > groupX1 &&
+        viewportY1 > groupY1 &&
+        viewportX2 < groupX2 &&
+        viewportY2 < groupY2) {
+            this.on_screen = true;
+            return true;
+    } else {
+        this.on_screen = false;
+        return false;
+    }
 };
 
 
@@ -621,22 +746,6 @@ function ToolBox(id, name, type, x, y, width, height) {
 exports.ToolBox = ToolBox;
 
 
-function Configuration(id, name, type, x, y, content) {
-    this.id = id;
-    this.name = name;
-    this.type = type;
-    this.x = x;
-    this.y = y;
-    this.height = 50;
-    this.width = 50;
-    this.size = 50;
-    this.content = content;
-    this.selected = null;
-    this.enabled = true;
-    this.icon = false;
-}
-exports.Configuration = Configuration;
-
 function Process(id, name, type, x, y) {
     this.id = id;
     this.name = name;
@@ -652,6 +761,11 @@ function Process(id, name, type, x, y) {
     this.device = null;
 }
 exports.Process = Process;
+
+Process.prototype.toJSON = function () {
+    return {id: this.id,
+            name: this.name};
+};
 
 function Stream(id, from_device, to_device, label) {
     this.id = id;
@@ -846,3 +960,37 @@ Stream.prototype.start_arc_angle_rad = function () {
 Stream.prototype.start_arc_angle = function () {
     return this.start_arc_angle_rad() * 180 / Math.PI;
 };
+
+function Test(name, event_trace, fsm_trace, pre_test_snapshot, post_test_snapshot) {
+    this.name = name;
+    this.event_trace = event_trace;
+    this.fsm_trace = fsm_trace;
+    this.pre_test_snapshot = pre_test_snapshot;
+    this.post_test_snapshot = post_test_snapshot;
+}
+exports.Test = Test;
+
+function TestResult(id, name, result, date, code_under_test) {
+    this.id = id;
+    this.name = name;
+    this.result = result;
+    this.date = date;
+    this.code_under_test = code_under_test;
+}
+exports.TestResult = TestResult;
+
+function Animation(id, steps, data, scope, tracer, callback) {
+
+    this.id = id;
+    this.steps = steps;
+    this.active = true;
+    this.frame_number_seq = util.natural_numbers(-1);
+    this.frame_number = 0;
+    this.data = data;
+    this.data.updateZoomBoolean = data.updateZoomBoolean !== undefined ? data.updateZoomBoolean : true;
+    this.callback = callback;
+    this.scope = scope;
+    this.interval = null;
+    this.fsm = new fsm.FSMController(this, "animation_fsm", animation_fsm.Start, tracer);
+}
+exports.Animation = Animation;

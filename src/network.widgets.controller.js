@@ -147,6 +147,10 @@ var NetworkWidgetsController = function($scope, $document, $location, $window) {
   $scope.inventory_toolbox.items.push(new models.Device(0, 'Router16', 0, 0, 'router'));
   $scope.inventory_toolbox.items.push(new models.Device(0, 'FSM1', 0, 0, 'fsm'));
   $scope.inventory_toolbox.items.push(new models.Device(0, 'FSM2', 0, 0, 'fsm'));
+  $scope.inventory_toolbox.items.push(new models.Device(0, 'Queue1', 0, 0, 'queue'));
+  $scope.inventory_toolbox.items.push(new models.Device(0, 'Queue1', 0, 0, 'queue'));
+  $scope.inventory_toolbox.items.push(new models.Device(0, 'Pod1', 0, 0, 'pod'));
+  $scope.inventory_toolbox.items.push(new models.Device(0, 'Pod2', 0, 0, 'pod'));
   $scope.inventory_toolbox.spacing = 150;
   $scope.inventory_toolbox.enabled = true;
   $scope.inventory_toolbox_controller.toolbox = $scope.inventory_toolbox;

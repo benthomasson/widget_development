@@ -1,3 +1,4 @@
+/* Copyright (c) 2017 Red Hat, Inc. */
 var inherits = require('inherits');
 var fsm = require('./fsm.js');
 var messages = require('./messages.js');
@@ -44,16 +45,20 @@ _Enabled.prototype.onKeyDown = function(controller, msg_type, $event) {
 	var scope = controller.scope;
 
     if ($event.key === 'c' && ($event.ctrlKey || $event.metaKey)) {
-        scope.first_controller.handle_message("CopySelected", $event);
+        scope.first_channel.send("CopySelected", $event);
+    }
+
+    if ($event.key === 'r' && ($event.ctrlKey || $event.metaKey)) {
+        location.reload();
     }
 
     if ($event.key === 'l') {
-        scope.first_controller.handle_message("NewLink", $event);
+        scope.first_channel.send("NewLink", $event);
         return;
     }
 
     if ($event.key === 'm') {
-        scope.first_controller.handle_message("NewStream", $event);
+        scope.first_channel.send("NewStream", $event);
     }
 
     if ($event.key === 'd') {
@@ -72,40 +77,41 @@ _Enabled.prototype.onKeyDown = function(controller, msg_type, $event) {
         scope.hide_interfaces = !scope.hide_interfaces;
         return;
     }
+    if($event.keyCode === 27){
+        // 27 is the escape key
+        scope.reset_fsm_state();
+        return;
+    }
 
-	if ($event.key === 'r') {
-        scope.first_controller.handle_message("NewDevice", new messages.NewDevice("router"));
+	if ($event.key === 'r' && !($event.ctrlKey || $event.metaKey)) {
+        scope.first_channel.send("NewDevice", new messages.NewDevice("router"));
         return;
 	}
     else if ($event.key === 's') {
-        scope.first_controller.handle_message("NewDevice", new messages.NewDevice("switch"));
+        scope.first_channel.send("NewDevice", new messages.NewDevice("switch"));
         return;
 	}
     else if ($event.key === 'a') {
-        scope.first_controller.handle_message("NewGroup", new messages.NewGroup("rack"));
+        scope.first_channel.send("NewGroup", new messages.NewGroup("rack"));
         return;
 	}
     else if ($event.key === 'h') {
-        scope.first_controller.handle_message("NewDevice", new messages.NewDevice("host"));
+        scope.first_channel.send("NewDevice", new messages.NewDevice("host"));
         return;
 	}
     else if ($event.key === 'g') {
-        scope.first_controller.handle_message("NewGroup", new messages.NewGroup("group"));
+        scope.first_channel.send("NewGroup", new messages.NewGroup("group"));
         return;
 	}
     else if ($event.key === 'e') {
-        scope.first_controller.handle_message("NewGroup", new messages.NewGroup("site"));
+        scope.first_channel.send("NewGroup", new messages.NewGroup("site"));
         return;
 	}
     else if ($event.key === '0') {
-        scope.panX = 0;
-        scope.panY = 0;
-        scope.current_scale = 1.0;
-        scope.updateScaledXY();
-        scope.updatePanAndScale();
+        scope.jump_to_animation(0, 0, 1.0);
     }
 
-	controller.next_controller.handle_message(msg_type, $event);
+	controller.delegate_channel.send(msg_type, $event);
 };
 
 _Start.prototype.start = function (controller) {
