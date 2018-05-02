@@ -28,7 +28,8 @@ istanbul:
 	cp vendor/*.js js/
 
 
-simple-server: lint main lessc
+simple-server: lint lessc
+	webpack
 	python -m SimpleHTTPServer 8080
 
 
