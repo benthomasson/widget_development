@@ -1,6 +1,6 @@
 .PHONY: all main lint lessc install simple-server deploy
 
-all: clean install lessc lint main
+all: install lessc lint main
 
 clean:
 	rm -rf src-instrumented

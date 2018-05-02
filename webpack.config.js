@@ -1,4 +1,5 @@
-var webpack = require('webpack');
+const webpack = require('webpack');
+const HardSourceWebpackPlugin = require('hard-source-webpack-plugin');
 module.exports = {
     entry: {
         app: "./src/main.js",
@@ -14,6 +15,7 @@ module.exports = {
         filename:  "bundle.js",
     },
     plugins: [
+         new HardSourceWebpackPlugin(),
          new webpack.ProvidePlugin({Hamster: 'hamsterjs'}),
          new webpack.optimize.CommonsChunkPlugin({ name: 'vendor', filename: 'vendor.bundle.js' })
     ]

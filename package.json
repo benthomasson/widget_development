@@ -21,11 +21,13 @@
     "mathjs": "",
     "reconnectingwebsocket": "^1.0.0",
     "require": "",
-    "webpack": "",
-    "titlecase": ""
+    "webpack": "^3.0.0",
+    "titlecase": "",
+    "hard-source-webpack-plugin": "^0.4.15"
   },
   "devDependencies": {
     "eslint": "^3.17.1",
-    "eslint-config-google": "^0.7.1"
+    "eslint-config-google": "^0.7.1",
+    "webpack-cli": "^2.1.2"
   }
 }
