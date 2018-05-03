@@ -1,3 +1,7 @@
+/* Copyright (c) 2017 Red Hat, Inc. */
+//@import 'network-nav/network.nav.block.less';
+//@import 'network-details/details.block.less';
+//@import 'zoom-widget/zoom.block.less';
 
 @font-face {
     font-family: 'Open Sans';
@@ -19,7 +23,6 @@
 @light-background: #ffffff;
 @light-widget-detail: #ffffff;
 @dark-widget-detail: #707070;
-@medium-widget-detail: #D7D7D7;
 @widget-body: #D7D7D7;
 @link: #D7D7D7;
 @group: #707070;
@@ -32,10 +35,12 @@
 @button-text-pressed: #ffffff;
 @green: #5CB85C;
 @red:  #D9534F;
+@blue: #337AB7;
 @light-toolbox-background: #f6f6f6;
+@icon-background-hover:@blue;
 
 .NetworkUI {
-    background-color: @light-background;
+    background-color: @light-toolbox-background;
     cursor: none;
 }
 
@@ -113,14 +118,17 @@
 }
 
 .NetworkUI__router {
-    fill: @widget-body;
-    stroke: @dark-widget-detail;
-    stroke-width: 2;
+    fill: @blue;
+}
+
+.NetworkUI__router--background{
+    fill: @light-background;
 }
 
 .NetworkUI__router--selected {
     stroke: @selected-blue;
     stroke-width: 4;
+    fill:@light-background;
 }
 
 .NetworkUI__router--remote-selected {
@@ -131,16 +139,6 @@
 .NetworkUI__router--selected-conflict {
     stroke: @selected-red;
     stroke-width: 4;
-}
-
-.NetworkUI__router line {
-    stroke: @light-widget-detail;
-    stroke-width: 20;
-}
-
-.NetworkUI__router polygon {
-    fill: @light-widget-detail;
-    stroke: none;
 }
 
 .NetworkUI__router-text {
@@ -155,14 +153,17 @@
 
 
 .NetworkUI__switch {
-    fill: @widget-body;
-    stroke: @dark-widget-detail;
-    stroke-width: 2;
+    fill: @blue;
+}
+
+.NetworkUI__switch--background{
+    fill: @light-background;
 }
 
 .NetworkUI__switch--selected {
     stroke: @selected-blue;
     stroke-width: 10;
+    fill:@light-background;
 }
 
 .NetworkUI__switch--remote-selected {
@@ -196,19 +197,15 @@
 }
 
 .NetworkUI__rack {
-    fill: @widget-body;
-    stroke: @dark-widget-detail;
-    stroke-width: 2;
+    fill: @blue;
 }
 
-.NetworkUI__rack-background {
+.NetworkUI__rack--background {
     fill: @light-background;
-    stroke: @light-background;
-    stroke-width: 2;
 }
 
 .NetworkUI__rack--selected {
-    fill: @selected-blue;
+    fill: @light-background;
     stroke: @selected-blue;
     stroke-width: 10;
 }
@@ -246,9 +243,24 @@
 }
 
 .NetworkUI__site {
-    fill: @widget-body;
+    fill: @blue;
     stroke: @dark-widget-detail;
     stroke-width: 2;
+}
+
+.NetworkUI__site--fill0{
+    fill:@blue;
+}
+
+.NetworkUI__site--fill1{
+    fill:none;
+    stroke:@light-background;
+    stroke-width:2;
+    stroke-miterlimit:10;
+}
+
+.NetworkUI__site--fill2{
+    fill:@light-background;
 }
 
 .NetworkUI__site--network {
@@ -257,14 +269,12 @@
     stroke-width: 2;
 }
 
-.NetworkUI__site-background {
+.NetworkUI__site--background {
     fill: @light-background;
-    stroke: @light-background;
-    stroke-width: 2;
 }
 
 .NetworkUI__site--selected {
-    fill: @selected-blue;
+    fill: @light-background;
     stroke: @selected-blue;
     stroke-width: 10;
 }
@@ -337,92 +347,16 @@
     font-size: 14px;
 }
 
-.NetworkUI__layer {
-    fill: @button-body;
-    stroke: @button-outline;
-    stroke-width: 1;
-}
-
-.NetworkUI__layer-text {
-    fill: @button-text;
-    font-family: 'Open Sans';
-    font-size: 14px;
-}
-
-.NetworkUI__layer--button-pressed {
-    fill: @button-body-pressed;
-    stroke: @button-outline;
-    stroke-width: 1;
-}
-
-.NetworkUI__layer-text--button-pressed {
-    fill: @button-text-pressed;
-    font-family: 'Open Sans';
-    font-size: 14px;
-}
-
-.NetworkUI__layer--button-hover {
-    fill: @button-body-hover;
-    stroke: @button-outline;
-    stroke-width: 1;
-}
-
-.NetworkUI__layer-text--button-hover {
-    fill: @button-text;
-    font-family: 'Open Sans';
-    font-size: 14px;
-}
-
-.NetworkUI__stencil {
-    fill: @button-body;
-    stroke: @button-outline;
-    stroke-width: 1;
-}
-
-.NetworkUI__stencil-text {
-    fill: @button-text;
-    font-family: 'Open Sans';
-    font-size: 14px;
-}
-
-.NetworkUI__stencil--button-pressed {
-    fill: @button-body-pressed;
-    stroke: @button-outline;
-    stroke-width: 1;
-}
-
-.NetworkUI__stencil-text--button-pressed {
-    fill: @button-text-pressed;
-    font-family: 'Open Sans';
-    font-size: 14px;
-}
-
-.NetworkUI__stencil--button-hover {
-    fill: @button-body-hover;
-    stroke: @button-outline;
-    stroke-width: 1;
-}
-
-.NetworkUI__stencil-text--button-hover {
-    fill: @button-text;
-    font-family: 'Open Sans';
-    font-size: 14px;
-}
-
 .NetworkUI__host {
-    fill: @widget-body;
-    stroke: @dark-widget-detail;
-    stroke-width: 2;
+    fill: @blue;
 }
 
-.NetworkUI__host-background {
+.NetworkUI__host--background {
     fill: @light-background;
-    stroke: @light-background;
-    stroke-width: 2;
 }
 
 .NetworkUI__host--selected {
-    fill: @selected-blue;
+    fill: @light-background;
     stroke: @selected-blue;
     stroke-width: 10;
 }
@@ -536,7 +470,7 @@
 
 
 .NetworkUI__interface {
-    fill: @dark-widget-detail;
+    fill: @button-outline;
 }
 
 .NetworkUI__interface--selected {
@@ -560,13 +494,6 @@
     font-size: 8px;
     font-family: 'Open Sans';
 }
-
-.NetworkUI__touch {
-    stroke: @debug-copynot;
-    fill: none;
-}
-
-
 
 .NetworkUI__group--selected {
     stroke: @selected-blue;
@@ -616,13 +543,25 @@
 
 .NetworkUI__toolbox {
     stroke: none;
-    fill: @light-toolbox-background;
+    fill: @light-background;
+}
+
+.NetworkUI__toolbox-collapsed{
+    fill: @light-background;
+    stroke: @button-outline;
+    stroke-width: 1;
+    rx: 0;
+    stroke-dasharray: calc(~"100vh - 115px");
+    stroke-dashoffset: -45;
 }
 
 .NetworkUI__toolbox-bezel {
-    stroke: @group;
-    stroke-width: 2;
+    stroke: @button-outline;
+    stroke-width: 1;
     fill: none;
+    rx: 0;
+    stroke-dasharray: calc(~"100vh - 115px");
+    stroke-dashoffset: -200;
 }
 
 .NetworkUI__process {
@@ -697,102 +636,63 @@
     font-family: 'Open Sans';
 }
 
-.NetworkUI__fsm {
-    fill: @widget-body;
+.NetworkUI__chevron{
+    fill: @button-body-pressed;
+}
+
+.NetworkUI__chevron--hover,
+.NetworkUI__chevron--pressed{
+    cursor: pointer;
+    fill: white;
+}
+
+.NetworkUI__iconBackground{
+    fill:@button-body;
+    cursor: pointer;
+}
+
+.NetworkUI__iconBackground--hover,
+.NetworkUI__iconBackground--pressed{
+    fill: @icon-background-hover;
+}
+
+
+.NetworkUI__toolbox--title{
+    fill: @dark-widget-detail;
+    text-transform: uppercase;
+    font-size: 14px;
+    font-weight: bold;
+}
+
+.NetworkUI__contextMenu{
+    fill: @light-background;
+    stroke: @button-outline;
+    stroke-width: 1;
+
+}
+
+.NetworkUI__contextMenuButton{
+    fill: @light-background;
+}
+
+.NetworkUI__contextMenuButtonText{
+    fill: #333; //@button-text;
+    font-family: 'Open Sans';
+    font-size: 14px;
+}
+
+.NetworkUI__contextMenuButtonText-hover{
+    fill: #333; //@button-text;
+    font-family: 'Open Sans';
+    font-size: 14px;
+}
+
+.NetworkUI__contextMenuButton-hover,
+.NetworkUI__contextMenuButton-pressed{
+    fill:@button-body-hover;
+}
+
+.NetworkUI__test_results {
+    fill: @light-background;
     stroke: @dark-widget-detail;
-    stroke-width: 2;
-}
-
-.NetworkUI__fsm--selected {
-    stroke: @selected-blue;
-    stroke-width: 4;
-}
-
-.NetworkUI__fsm--remote-selected {
-    stroke: @selected-mango;
-    stroke-width: 4;
-}
-
-.NetworkUI__fsm--selected-conflict {
-    stroke: @selected-red;
-    stroke-width: 4;
-}
-
-.NetworkUI__fsm line {
-    stroke: @light-widget-detail;
-    stroke-width: 20;
-}
-
-.NetworkUI__fsm-state {
-    fill: @light-widget-detail;
-    stroke: none;
-}
-
-.NetworkUI__fsm-transition {
-    fill: none;
-    stroke: @light-widget-detail;
-}
-
-.NetworkUI__fsm-arrow {
-    fill: @light-widget-detail;
-    stroke: @light-widget-detail;
-}
-
-.NetworkUI__fsm-text {
-    fill: @button-text;
-    font-family: 'Open Sans';
-}
-
-.NetworkUI__fsm-text--selected {
-    font-family: 'Open Sans';
-}
-
-.NetworkUI__queue {
-    fill: @widget-body;
-    stroke: @dark-widget-detail;
-    stroke-width: 2;
-}
-
-.NetworkUI__queue--selected {
-    stroke: @selected-blue;
-    stroke-width: 4;
-}
-
-.NetworkUI__queue--remote-selected {
-    stroke: @selected-mango;
-    stroke-width: 4;
-}
-
-.NetworkUI__queue--selected-conflict {
-    stroke: @selected-red;
-    stroke-width: 4;
-}
-
-.NetworkUI__queue line {
-    stroke: @light-widget-detail;
-    stroke-width: 5;
-}
-
-.NetworkUI__queue-state {
-    fill: @light-widget-detail;
-    stroke: none;
-}
-
-.NetworkUI__queue-transition {
-    fill: none;
-    stroke: @light-widget-detail;
-}
-
-.NetworkUI__queue-arrow {
-    fill: @light-widget-detail;
-    stroke: @light-widget-detail;
-}
-
-.NetworkUI__queue-text {
-    fill: @button-text;
-    font-family: 'Open Sans';
-}
-
-.NetworkUI__queue-text--selected {
-    font-family: 'Open Sans';
 }
