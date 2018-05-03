@@ -11,7 +11,9 @@ clean:
 install:
 	npm i
 
-main: install
+main: build install
+
+build:
 	webpack
 
 lint:
@@ -28,8 +30,7 @@ istanbul:
 	cp vendor/*.js js/
 
 
-simple-server: lint lessc
-	webpack
+simple-server: lint build lessc
 	python -m SimpleHTTPServer 8080
 
 
