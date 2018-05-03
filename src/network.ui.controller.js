@@ -1,4 +1,5 @@
 /* Copyright (c) 2017 Red Hat, Inc. */
+var fake_data = require('./fake_data.js');
 var angular = require('angular');
 var fsm = require('./fsm.js');
 var null_fsm = require('./null.fsm.js');
@@ -76,7 +77,7 @@ var NetworkUIController = function($scope,
   $scope.document = document;
   $scope.my_location = $location.protocol() + "://" + $location.host() + ':' + $location.port();
   $scope.history = [];
-  $scope.client_id = 0;
+  $scope.client_id = 1;
   $scope.onMouseDownResult = "";
   $scope.onMouseUpResult = "";
   $scope.onMouseEnterResult = "";
@@ -192,7 +193,7 @@ var NetworkUIController = function($scope,
                  to_y: 0};
 
     $scope.send_trace_message = function (message) {
-        if (!$scope.recording) {
+        if (!$scope.recording && !$scope.debug.hidden) {
             return;
         }
         message.sender = $scope.client_id;
@@ -206,6 +207,8 @@ var NetworkUIController = function($scope,
             catch(err) {
                 $scope.initial_messages.push(message);
             }
+        } else {
+            console.log(message);
         }
     };
 
@@ -2050,6 +2053,8 @@ var NetworkUIController = function($scope,
         var data = messages.serialize(message);
         if (!$scope.disconnected) {
             $scope.control_socket.send(data);
+        } else {
+            console.log(message);
         }
     };
 
@@ -2246,6 +2251,8 @@ var NetworkUIController = function($scope,
         }
         $scope.animations = [];
     };
+
+    fake_data.load_fake_data($scope);
 };
 
 exports.NetworkUIController = NetworkUIController;

@@ -184,7 +184,9 @@ _Ready.prototype.onPasteDevice = function (controller, msg_type, message) {
     } else {
         device.template = true;
     }
-    device.variables = JSON.parse(message.device.variables);
+    if (message.device.variables !== undefined && typeof message.device.variables === 'string') {
+        device.variables = JSON.parse(message.device.variables);
+    }
     scope.devices.push(device);
     c_messages.push(new messages.DeviceCreate(scope.client_id,
                                               device.id,
@@ -334,9 +336,9 @@ _Selected1.prototype.onMouseMove.transitions = ['Move'];
 
 _Selected1.prototype.onMouseUp = function (controller) {
 
-    if(controller.scope.$parent.vm.rightPanelIsExpanded){
-        controller.scope.onDetailsContextButton();
-    }
+    //if(controller.scope.$parent.vm.rightPanelIsExpanded){
+    //    controller.scope.onDetailsContextButton();
+    //}
     controller.changeState(Selected2);
 
 };
