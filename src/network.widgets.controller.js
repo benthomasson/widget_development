@@ -132,6 +132,7 @@ var NetworkWidgetsController = function($scope, $document, $location, $window) {
 
   //Inventory Toolbox Setup
   $scope.inventory_toolbox = new models.ToolBox(0, 'Inventory', 'device', 10, 200, 150, $scope.graph.height - 200 - 100);
+
   $scope.inventory_toolbox.items.push(new models.Device(0, 'Router6', 0, 0, 'router'));
   $scope.inventory_toolbox.items.push(new models.Device(0, 'Switch6', 0, 0, 'switch'));
   $scope.inventory_toolbox.items.push(new models.Device(0, 'Host6', 0, 0, 'host'));
@@ -151,6 +152,7 @@ var NetworkWidgetsController = function($scope, $document, $location, $window) {
   $scope.inventory_toolbox.items.push(new models.Device(0, 'Queue1', 0, 0, 'queue'));
   $scope.inventory_toolbox.items.push(new models.Device(0, 'Pod1', 0, 0, 'pod'));
   $scope.inventory_toolbox.items.push(new models.Device(0, 'Pod2', 0, 0, 'pod'));
+
   $scope.inventory_toolbox.spacing = 150;
   $scope.inventory_toolbox.enabled = true;
   $scope.inventory_toolbox_controller.toolbox = $scope.inventory_toolbox;
@@ -166,7 +168,9 @@ var NetworkWidgetsController = function($scope, $document, $location, $window) {
   $scope.rack_toolbox_controller = new fsm.FSMController($scope, toolbox_fsm.Start, $scope.inventory_toolbox_controller);
   //Rack Toolbox Setup
   $scope.rack_toolbox = new models.ToolBox(0, 'Rack', 'rack', 10, 200, 150, $scope.graph.height - 200 - 100);
+
   $scope.rack_toolbox.items.push(new models.Group(0, 'Rack3', 'rack', 0, 0, 200, 1000, 'false'));
+
   $scope.rack_toolbox.spacing = 200;
   $scope.rack_toolbox.enabled = false;
   $scope.rack_toolbox_controller.remove_on_drop = false;
@@ -203,7 +207,6 @@ var NetworkWidgetsController = function($scope, $document, $location, $window) {
   var mids = $scope.message_id_seq;
   var gids = $scope.group_id_seq;
   var lids = $scope.link_id_seq;
-
 
   $scope.initial_messages = [
       ["DeviceCreate",{"msg_type":"DeviceCreate","sender":0,"id":dids(),"x":100,"y":100,"name":"Router1","type":"router","message_id":mids()}],
