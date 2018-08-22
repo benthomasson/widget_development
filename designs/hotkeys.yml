@@ -1,5 +1,5 @@
-finite_state_machine_id: 113
-name: hotkeys
+finite_state_machine_id: 1
+name: hotkeys_fsm
 states:
 - id: 2
   label: Enabled

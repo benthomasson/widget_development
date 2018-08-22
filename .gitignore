@@ -7,3 +7,6 @@
 /src-instrumented
 /index-instrumented.html
 /static
+/extracted
+/src/extracted
+*.pyc
