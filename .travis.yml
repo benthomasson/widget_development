@@ -1,0 +1,10 @@
+language: python
+python:
+  - "2.7"
+install:
+  - npm -g i jshint
+  - pip install flake8
+  - npm install
+script:
+  - flake8 .
+  - jshint src/*.js
