@@ -1,0 +1,5 @@
+<g ng-if="debug">
+<g ng-attr-class="{{cursor.hidden ? 'hidden' : '' }}">
+<circle ng-attr-cx="{{cursor.x}}" ng-attr-cy="{{cursor.y}}" r=50 class="XUI__cursor"></circle>
+</g>
+</g>

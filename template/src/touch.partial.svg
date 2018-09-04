@@ -1,0 +1,1 @@
+<circle ng-attr-cx="{{touch.x}}" ng-attr-cy="{{touch.y}}" r=50 class="XUI__touch"></circle>

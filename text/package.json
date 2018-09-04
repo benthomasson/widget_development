@@ -1,0 +1,35 @@
+{
+  "name": "x_code",
+  "version": "1.0.0",
+  "description": "example",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Ben Thomasson",
+  "license": "ISC",
+  "dependencies": {
+    "angular": "~1.6.2",
+    "angular-mousewheel": "~1.0.5",
+    "angular-ui-router": "",
+    "angular-xeditable": "~0.8.0",
+    "browserify": "",
+    "hamsterjs": "~1.1.2",
+    "inherits": "",
+    "jshint": "",
+    "less": "^2.7.2",
+    "mathjs": "",
+    "reconnectingwebsocket": "^1.0.0",
+    "require": "",
+    "webpack": "~3.11.0",
+    "titlecase": "",
+    "lodash": ""
+  },
+  "devDependencies": {
+    "eslint": "^3.17.1",
+    "eslint-config-google": "^0.7.1",
+    "html-loader": "^0.5.1",
+    "ngtemplate-loader": "^2.0.1",
+    "yamljs": ""
+  }
+}
