@@ -1,0 +1,41 @@
+diagram_uuid: c1952ef2-4d1b-4465-92a1-e0ec1c724af0
+name: diagram
+states:
+- id: 4
+  label: Edit
+  x: 883
+  y: 717
+- id: 3
+  label: Selected
+  x: 393
+  y: 727
+- id: 1
+  label: Start
+  x: 614
+  y: 177
+- id: 2
+  label: Text
+  x: 620
+  y: 397
+transitions:
+- from_state: Edit
+  label: onKeyDown
+  to_state: Text
+- from_state: Edit
+  label: onMouseDown
+  to_state: Text
+- from_state: Edit
+  label: onMouseDown
+  to_state: Selected
+- from_state: Selected
+  label: onMouseDown
+  to_state: Edit
+- from_state: Selected
+  label: onMouseDown
+  to_state: Text
+- from_state: Start
+  label: start
+  to_state: Text
+- from_state: Text
+  label: onMouseDown
+  to_state: Selected

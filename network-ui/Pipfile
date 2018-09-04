@@ -5,7 +5,8 @@ name = "pypi"
 
 [packages]
 docopt = "*"
-pyyaml = "*"
+PyYAML = "*"
+"Jinja2" = "*"
 
 [dev-packages]
 

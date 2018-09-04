@@ -18,12 +18,17 @@ import sys
 import fsm_diff.cli
 import transform_fsm
 import yaml
+import os
 
 from jinja2 import FileSystemLoader, Environment
 
 from subprocess import Popen, PIPE
 
 logger = logging.getLogger('fsm_generate_diffs')
+
+def touch(fname, times=None):
+    with open(fname, 'a'):
+        os.utime(fname, times)
 
 
 def main(args=None):
@@ -38,6 +43,7 @@ def main(args=None):
         logging.basicConfig(level=logging.WARNING)
 
     implementation = parsed_args['<implementation>']
+    touch(implementation)
 
     p = Popen(['./extract.js', implementation], stdout=PIPE)
     output = p.communicate()[0]
@@ -49,7 +55,7 @@ def main(args=None):
     with open(parsed_args['<design>']) as f:
         a = yaml.load(f.read())
 
-    data = fsm_diff.cli.fsm_diff(a, b)
+    data = fsm_diff.cli.fsm_diff('a', 'b', a, b)
     data = transform_fsm.transform_fsm(data)
 
     env = Environment(loader=FileSystemLoader("templates"))
