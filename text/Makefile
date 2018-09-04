@@ -24,3 +24,7 @@ deploy: lint lessc main
 	rsync -av  native.manifest index.html js css *.png ../staticfiles/11/
 	cp ../index.html ../staticfiles/
 
+
+server: main
+	python -m http.server
+
