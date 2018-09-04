@@ -2,8 +2,15 @@
 
 @background: #ffffff;
 @copynot: rgb(77,200,242);
+@selected1: #79b7fd;
+@selected2: #c7e1fe;
+@selected: #a9d2fe;
 @light: #ffffff;
 @dark: #707070;
+
+svg {
+    shape-rendering: crispEdges;
+}
 
 .XUI {
     background-color: @background;
@@ -27,5 +34,39 @@
 
 .XUI__debug_text {
     fill: @copynot;
+    stroke: none;
+}
+
+.XUI__text_input_box {
+    fill: none;
+    stroke: @dark;
+    stroke-width: 1;
+}
+
+.XUI__text_input_cursor {
+    fill: none;
+    stroke: @dark;
+    stroke-width: 1;
+}
+
+.XUI__text_input_box__selected1 {
+    fill: none;
+    stroke: @selected1;
+    stroke-width: 3;
+}
+
+.XUI__text_input_box__selected2 {
+    fill: none;
+    stroke: @selected2;
+    stroke-width: 6;
+}
+
+.XUI__text_input_text__selected {
+    fill: @selected;
+    stroke: none;
+}
+
+.XUI__text_input {
+    fill: @dark;
     stroke: none;
 }

@@ -5,6 +5,7 @@ var xAppDirective = require('./x.app.directive.js');
 var cursor = require('./cursor.directive.js');
 var debug = require('./debug.directive.js');
 var touch = require('./touch.directive.js');
+var textInput = require('./text.input.directive.js');
 
 var xApp = angular.module('xApp', [
     'monospaced.mousewheel',
@@ -14,7 +15,8 @@ var xApp = angular.module('xApp', [
     .directive('xxxApp', xAppDirective.xAppDirective)
     .directive('xxxCursor', cursor.cursor)
     .directive('xxxDebug', debug.debug)
-    .directive('xxxTouch', touch.touch);
+    .directive('xxxTouch', touch.touch)
+    .directive('xxxTextInput', textInput.textInput);
 
 console.log("Loaded xApp");
 
