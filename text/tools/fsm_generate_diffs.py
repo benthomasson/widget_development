@@ -26,6 +26,7 @@ from subprocess import Popen, PIPE
 
 logger = logging.getLogger('fsm_generate_diffs')
 
+
 def touch(fname, times=None):
     with open(fname, 'a'):
         os.utime(fname, times)

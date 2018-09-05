@@ -10,7 +10,7 @@ clean:
 install:
 	npm i
 
-main: install
+main:
 	webpack
 
 lint:
@@ -25,6 +25,6 @@ deploy: lint lessc main
 	cp ../index.html ../staticfiles/
 
 
-server: main
+server: lint lessc main
 	python -m http.server
 

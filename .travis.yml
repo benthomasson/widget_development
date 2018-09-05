@@ -4,7 +4,11 @@ python:
 install:
   - npm -g i jshint
   - pip install flake8
-  - npm install
+  - npm install --prefix network-ui
+  - npm install --prefix text
+  - npm install --prefix template
 script:
   - flake8 --ignore=E501 .
-  - jshint src/*.js
+  - jshint network-ui/src/*.js
+  - jshint text/src/*.js
+  - jshint template/src/*.js
