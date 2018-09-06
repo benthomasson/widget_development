@@ -1,6 +1,6 @@
-<g ng-attr-transform="translate({{text.x}}, {{text.y}}) scale(4.0)">
+<g ng-attr-transform="translate({{text.x}}, {{text.y}}) scale(1.0)">
 <g> <!-- text box -->
-<rect x=-10 y=-10 ng-attr-width="{{text.width}}" height=20 class="XUI__text_input_box">
+<rect x=-10 y=-10 ng-attr-width="{{text.width}}" height=20 class="XUI__text_input_box" rx=2>
 </rect>
 </g> <!-- end text box -->
 <g ng-if="text.selected"> <!-- selection -->
