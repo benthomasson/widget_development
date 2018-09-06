@@ -21,9 +21,10 @@ var XController = function($scope, $window, $document) {
     $scope.debug = true;
     $scope.selected_shape = null;
     $scope.animations = {};
+    $scope.future_messages = [];
     console.log("Started XController");
 
-    $scope.text = new models.TextInput(1, "Hello World", $scope);
+    $scope.text = new models.TextInput(1, "Hello World", $scope, $scope);
 
     $scope.send_trace_message = function (message) {
         console.log(message);
@@ -134,6 +135,15 @@ var XController = function($scope, $window, $document) {
 
         $scope.$digest();
     });
+    setInterval( function () {
+        $scope.frame_number = Math.floor(window.performance.now());
+        if ($scope.future_messages.length > 0) {
+            var message = $scope.future_messages.pop();
+            console.log(message);
+            $scope.first_channel.send(message[0], message[1]);
+        }
+        $scope.$apply();
+    }, 17);
 
     $document.bind("keydown", $scope.onKeyDown);
 

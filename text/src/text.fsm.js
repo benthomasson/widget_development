@@ -44,11 +44,13 @@ _Start.prototype.start.transitions = ['Ready'];
 _Edit.prototype.start = function (controller) {
     controller.scope.edit = true;
     controller.scope.selected = true;
+    controller.scope.cursor = true;
 };
 
 _Edit.prototype.end = function (controller) {
     controller.scope.edit = false;
     controller.scope.selected = false;
+    controller.scope.cursor = false;
 };
 
 _Edit.prototype.onMouseDown = function (controller) {
@@ -73,15 +75,22 @@ _Edit.prototype.onKeyDown = function (controller, msg_type, $event) {
 	var item = controller.scope;
 	if ($event.keyCode === 8 || $event.keyCode === 46) { //Delete
 		item.value = item.value.slice(0, -1);
+        item.future_update_cursor_pos();
 	} else if ($event.keyCode >= 48 && $event.keyCode <=90) { //Alphanumeric
         item.value += $event.key;
+        item.future_update_cursor_pos();
 	} else if ($event.keyCode >= 186 && $event.keyCode <=222) { //Punctuation
         item.value += $event.key;
+        item.future_update_cursor_pos();
 	} else if ($event.keyCode === 13) { //Enter
         controller.changeState(Ready);
     }
 };
 _Edit.prototype.onKeyDown.transitions = ['Ready'];
+
+_Edit.prototype.onUpdateCursor = function (controller) {
+    controller.scope.update_cursor_pos();
+};
 
 _Ready.prototype.onMouseDown = function (controller) {
 
@@ -90,17 +99,23 @@ _Ready.prototype.onMouseDown = function (controller) {
 };
 _Ready.prototype.onMouseDown.transitions = ['Edit'];
 
+_Ready.prototype.onUpdateCursor = function (controller) {
+    controller.scope.update_cursor_pos();
+};
+
 
 _TextSelected.prototype.start = function (controller) {
     controller.scope.edit = true;
     controller.scope.selected = true;
     controller.scope.text_selected = true;
+    controller.scope.cursor = false;
 };
 
 _TextSelected.prototype.end = function (controller) {
     controller.scope.edit = false;
     controller.scope.selected = false;
     controller.scope.text_selected = false;
+    controller.scope.cursor = false;
 };
 
 _TextSelected.prototype.onMouseDown = function (controller) {
