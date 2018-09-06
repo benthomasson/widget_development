@@ -1,4 +1,5 @@
 
 
 <g ng-if="debug">
+    <text ng-attr-x="100" y="100" class="XUI__debug-text">Text State: {{text.fsm.state.name}}</text>
 </g>

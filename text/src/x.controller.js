@@ -1,9 +1,11 @@
+/* Copyright (c) 2018 Red Hat Inc */
 /* Copyright (c) 2017 Ben Thomasson */
 //console.log = function () {};
 
 var angular = require('angular');
 var util = require('./util.js');
 var fsm = require('./fsm.js');
+var models = require('./models.js');
 
 var XController = function($scope, $window) {
     window.scope = $scope;
@@ -21,13 +23,17 @@ var XController = function($scope, $window) {
     $scope.animations = {};
     console.log("Started XController");
 
+    $scope.text = new models.TextInput(1, "Hello World", $scope);
+
     $scope.send_trace_message = function (message) {
         console.log(message);
     };
 
     $scope.move_controller = null;
 
-    $scope.first_channel = new fsm.NullChannel(null, $scope);
+    $scope.first_channel = new fsm.Channel(null,
+                                           $scope.text.fsm,
+                                           $scope);
 
 
     $scope.onMouseOver = function($event) {

@@ -1,0 +1,30 @@
+diagram_uuid: a9e90d5e-8763-499e-ab3b-0814cf393f6a
+finite_state_machine_id: 1
+name: text
+states:
+- id: 4
+  label: Edit
+  x: 644
+  y: 652
+- id: 4
+  label: Edit
+  x: 644
+  y: 652
+- id: 3
+  label: Ready
+  x: 650
+  y: 361
+- id: 1
+  label: Start
+  x: 648
+  y: 154
+transitions:
+- from_state: Edit
+  label: onMouseDown
+  to_state: Ready
+- from_state: Ready
+  label: onMouseDown
+  to_state: Edit
+- from_state: Start
+  label: start
+  to_state: Ready
