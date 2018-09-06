@@ -6,10 +6,6 @@ states:
   label: Edit
   x: 644
   y: 652
-- id: 4
-  label: Edit
-  x: 644
-  y: 652
 - id: 3
   label: Ready
   x: 650
@@ -18,7 +14,14 @@ states:
   label: Start
   x: 648
   y: 154
+- id: 5
+  label: TextSelected
+  x: 647
+  y: 923
 transitions:
+- from_state: Edit
+  label: onMouseDown
+  to_state: TextSelected
 - from_state: Edit
   label: onMouseDown
   to_state: Ready
@@ -28,3 +31,6 @@ transitions:
 - from_state: Start
   label: start
   to_state: Ready
+- from_state: TextSelected
+  label: onMouseDown
+  to_state: Edit

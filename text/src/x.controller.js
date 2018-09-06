@@ -7,7 +7,7 @@ var util = require('./util.js');
 var fsm = require('./fsm.js');
 var models = require('./models.js');
 
-var XController = function($scope, $window) {
+var XController = function($scope, $window, $document) {
     window.scope = $scope;
     $scope.frame_width = $window.innerWidth;
     $scope.frame_height = $window.innerHeight;
@@ -35,6 +35,12 @@ var XController = function($scope, $window) {
                                            $scope.text.fsm,
                                            $scope);
 
+
+    $scope.onKeyDown = function ($event) {
+        $scope.first_channel.send('KeyDown', $event);
+        $scope.$apply();
+        $event.preventDefault();
+    };
 
     $scope.onMouseOver = function($event) {
         $event.preventDefault();
@@ -129,6 +135,7 @@ var XController = function($scope, $window) {
         $scope.$digest();
     });
 
+    $document.bind("keydown", $scope.onKeyDown);
 
     console.log("Started XController");
 

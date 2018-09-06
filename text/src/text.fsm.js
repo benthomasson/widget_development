@@ -23,6 +23,13 @@ inherits(_Ready, fsm._State);
 var Ready = new _Ready();
 exports.Ready = Ready;
 
+function _TextSelected () {
+    this.name = 'TextSelected';
+}
+inherits(_TextSelected, fsm._State);
+var TextSelected = new _TextSelected();
+exports.TextSelected = TextSelected;
+
 
 
 
@@ -52,6 +59,29 @@ _Edit.prototype.onMouseDown = function (controller) {
 _Edit.prototype.onMouseDown.transitions = ['Ready'];
 
 
+_Edit.prototype.onMouseDown = function (controller) {
+
+    controller.changeState(TextSelected);
+
+};
+_Edit.prototype.onMouseDown.transitions = ['TextSelected'];
+
+
+_Edit.prototype.onKeyDown = function (controller, msg_type, $event) {
+    //Key codes found here:
+    //https://www.cambiaresearch.com/articles/15/javascript-char-codes-key-codes
+	var item = controller.scope;
+	if ($event.keyCode === 8 || $event.keyCode === 46) { //Delete
+		item.value = item.value.slice(0, -1);
+	} else if ($event.keyCode >= 48 && $event.keyCode <=90) { //Alphanumeric
+        item.value += $event.key;
+	} else if ($event.keyCode >= 186 && $event.keyCode <=222) { //Punctuation
+        item.value += $event.key;
+	} else if ($event.keyCode === 13) { //Enter
+        controller.changeState(Ready);
+    }
+};
+_Edit.prototype.onKeyDown.transitions = ['Ready'];
 
 _Ready.prototype.onMouseDown = function (controller) {
 
@@ -59,4 +89,33 @@ _Ready.prototype.onMouseDown = function (controller) {
 
 };
 _Ready.prototype.onMouseDown.transitions = ['Edit'];
+
+
+_TextSelected.prototype.start = function (controller) {
+    controller.scope.edit = true;
+    controller.scope.selected = true;
+    controller.scope.text_selected = true;
+};
+
+_TextSelected.prototype.end = function (controller) {
+    controller.scope.edit = false;
+    controller.scope.selected = false;
+    controller.scope.text_selected = false;
+};
+
+_TextSelected.prototype.onMouseDown = function (controller) {
+
+    controller.changeState(Edit);
+
+};
+_TextSelected.prototype.onMouseDown.transitions = ['Edit'];
+
+_TextSelected.prototype.onKeyDown = function (controller, msg_type, $event) {
+    controller.scope.value = "";
+    controller.changeState(Edit);
+    controller.handle_message("KeyDown", $event);
+};
+_TextSelected.prototype.onKeyDown.transitions = ['Edit'];
+
+
 
