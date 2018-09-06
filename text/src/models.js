@@ -7,6 +7,7 @@ function TextInput(id, value, scope, tracer) {
     this.y = 400;
     this.id = id;
     this.width = 100;
+    this.height = 20;
     this.value = value;
     this.pre_cursor_value = value;
     this.post_cursor_value = '';
