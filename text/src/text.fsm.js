@@ -53,23 +53,22 @@ _Edit.prototype.end = function (controller) {
     controller.scope.cursor = false;
 };
 
-_Edit.prototype.onMouseDown = function (controller) {
-
-    controller.changeState(Ready);
-
-};
-_Edit.prototype.onMouseDown.transitions = ['Ready'];
-
 
 _Edit.prototype.onMouseDown = function (controller) {
 
-    if ((window.performance.now() - controller.scope.lastClick) < 500) {
-        controller.changeState(TextSelected);
+    var x = controller.scope.scope.cursor.x;
+    var y = controller.scope.scope.cursor.y;
+
+    if (controller.scope.is_selected(x, y)) {
+        if ((window.performance.now() - controller.scope.lastClick) < 500) {
+            controller.changeState(TextSelected);
+        }
+        controller.scope.lastClick = window.performance.now();
+    } else {
+        controller.changeState(Ready);
     }
-
-    controller.scope.lastClick = window.performance.now();
 };
-_Edit.prototype.onMouseDown.transitions = ['TextSelected'];
+_Edit.prototype.onMouseDown.transitions = ['TextSelected', 'Ready'];
 
 
 _Edit.prototype.onKeyDown = function (controller, msg_type, $event) {
@@ -97,8 +96,12 @@ _Edit.prototype.onUpdateCursor = function (controller) {
 
 _Ready.prototype.onMouseDown = function (controller) {
 
-    controller.changeState(Edit);
+    var x = controller.scope.scope.cursor.x;
+    var y = controller.scope.scope.cursor.y;
 
+    if (controller.scope.is_selected(x, y)) {
+        controller.changeState(Edit);
+    }
 };
 _Ready.prototype.onMouseDown.transitions = ['Edit'];
 

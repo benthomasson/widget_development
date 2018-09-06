@@ -1,4 +1,5 @@
 var fsm = require('./fsm.js');
+var util = require('./util.js');
 var text_fsm = require('./text.fsm.js');
 
 function TextInput(id, value, scope, tracer) {
@@ -31,9 +32,15 @@ TextInput.prototype.update_cursor_pos = function() {
     var textInput = document.getElementById('text_' + this.id);
     if (textInput !== null) {
         var width = textInput.getBBox().width;
-        this.cursor_pos = width - 4;
+        this.cursor_pos = width + 6;
         this.width = width + 16;
     } else {
         this.scope.future_messages.push(['UpdateCursor', {}]);
     }
+};
+
+TextInput.prototype.is_selected = function(x, y) {
+    console.log([x, y]);
+    console.log(util.rectangle_is_selected(this, x, y));
+    return util.rectangle_is_selected(this, x, y);
 };

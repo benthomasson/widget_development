@@ -2,4 +2,5 @@
 
 <g ng-if="debug">
     <text ng-attr-x="100" y="100" class="XUI__debug-text">Text State: {{text.fsm.state.name}}</text>
+    <text ng-attr-x="100" y="120" class="XUI__debug-text">Cursor: {{cursor.x}} {{cursor.y}}</text>
 </g>
