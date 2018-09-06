@@ -63,8 +63,11 @@ _Edit.prototype.onMouseDown.transitions = ['Ready'];
 
 _Edit.prototype.onMouseDown = function (controller) {
 
-    controller.changeState(TextSelected);
+    if ((window.performance.now() - controller.scope.lastClick) < 500) {
+        controller.changeState(TextSelected);
+    }
 
+    controller.scope.lastClick = window.performance.now();
 };
 _Edit.prototype.onMouseDown.transitions = ['TextSelected'];
 

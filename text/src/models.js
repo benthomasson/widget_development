@@ -2,6 +2,7 @@ var fsm = require('./fsm.js');
 var text_fsm = require('./text.fsm.js');
 
 function TextInput(id, value, scope, tracer) {
+    this.lastClick = window.performance.now();
     this.scope = scope;
     this.x = 400;
     this.y = 400;
