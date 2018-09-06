@@ -1,5 +1,5 @@
-var fsm = require('./fsm.js');
-var util = require('./util.js');
+var fsm = require('../fsm.js');
+var util = require('../util.js');
 var text_fsm = require('./text.fsm.js');
 
 function TextInput(id, value, scope, tracer) {

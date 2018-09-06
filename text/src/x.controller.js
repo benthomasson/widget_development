@@ -5,7 +5,7 @@
 var angular = require('angular');
 var util = require('./util.js');
 var fsm = require('./fsm.js');
-var models = require('./models.js');
+var models = require('./text/models.js');
 
 var XController = function($scope, $window, $document) {
     window.scope = $scope;
