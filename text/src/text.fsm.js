@@ -127,6 +127,7 @@ _TextSelected.prototype.onMouseDown.transitions = ['Edit'];
 
 _TextSelected.prototype.onKeyDown = function (controller, msg_type, $event) {
     controller.scope.value = "";
+    controller.scope.future_update_cursor_pos();
     controller.changeState(Edit);
     controller.handle_message("KeyDown", $event);
 };

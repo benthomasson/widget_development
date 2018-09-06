@@ -3,9 +3,10 @@ var text_fsm = require('./text.fsm.js');
 
 function TextInput(id, value, scope, tracer) {
     this.scope = scope;
-    this.x = 100;
-    this.y = 100;
+    this.x = 400;
+    this.y = 400;
     this.id = id;
+    this.width = 100;
     this.value = value;
     this.pre_cursor_value = value;
     this.post_cursor_value = '';
@@ -26,13 +27,10 @@ TextInput.prototype.future_update_cursor_pos = function() {
 TextInput.prototype.update_cursor_pos = function() {
 
     var textInput = document.getElementById('text_' + this.id);
-    console.log(this.value);
-    console.log(this.value.length);
-    console.log(textInput);
     if (textInput !== null) {
-        console.log(textInput.getBBox());
-        this.cursor_pos = textInput.getBBox().width - 4;
-        console.log(this.cursor_pos);
+        var width = textInput.getBBox().width;
+        this.cursor_pos = width - 4;
+        this.width = width + 16;
     } else {
         this.scope.future_messages.push(['UpdateCursor', {}]);
     }
