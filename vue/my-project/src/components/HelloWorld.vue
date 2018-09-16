@@ -16,7 +16,8 @@
          v-on:tap="onTap"
          v-on:wheel="onMouseWheel">
         <debug-component v-bind:cursor_pos_x="cursor_pos_x"
-                         v-bind:cursor_pos_y="cursor_pos_y"></debug-component>
+                         v-bind:cursor_pos_y="cursor_pos_y"
+                         v-bind:last_key="last_key"></debug-component>
         <cursor-component v-bind:transform="transform"></cursor-component>
     </svg>
   </div>
@@ -37,6 +38,7 @@ export default {
       cursor_pos_x: {},
       cursor_pos_y: {},
       touches: [],
+      last_key: '',
       frame_height: window.innerHeight,
       frame_width: window.innerWidth
     }
@@ -125,10 +127,16 @@ export default {
       this.frame_height = window.innerHeight
       this.frame_width = window.innerWidth
       console.log([this.frame_width, this.frame_height])
+    },
+    onKeyDown: function (event) {
+      this.last_key = event.key
+      console.log(event)
+      event.preventDefault()
     }
   },
   mounted: function () {
     window.addEventListener('resize', this.onResize)
+    document.addEventListener('keydown', this.onKeyDown)
   }
 }
 </script>
