@@ -81,20 +81,18 @@ export default {
     },
     onTouchStart: function (event) {
       console.log(['onTouchStart', event])
-      var touches = [];
-      var i = 0;
+      var touches = []
+      var i = 0
       if (event.touches.length === 1) {
-        this.cursor_pos_x = event.touches[0].screenX;
-        this.cursor_pos_y = event.touches[0].screenY;
+        this.cursor_pos_x = event.touches[0].screenX
+        this.cursor_pos_y = event.touches[0].screenY
         this.update_cursor()
       }
       for (i = 0; i < event.touches.length; i++) {
-        touches.push({x: event.touches[i].screenX,
-                      y: event.touches[i].screenY});
-
+        touches.push({x: event.touches[i].screenX, y: event.touches[i].screenY})
       }
-      this.touches = touches;
-      event.preventDefault();
+      this.touches = touches
+      event.preventDefault()
     },
     onTouchEnd: function (event) {
       console.log(['onTouchEnd', event])
@@ -102,20 +100,18 @@ export default {
     },
     onTouchMove: function (event) {
       console.log(['onTouchMove', event])
-      var touches = [];
-      var i = 0;
+      var touches = []
+      var i = 0
       if (event.touches.length === 1) {
-        this.cursor_pos_x = event.touches[0].screenX;
-        this.cursor_pos_y = event.touches[0].screenY;
+        this.cursor_pos_x = event.touches[0].screenX
+        this.cursor_pos_y = event.touches[0].screenY
         this.update_cursor()
       }
       for (i = 0; i < event.touches.length; i++) {
-        touches.push({x: event.touches[i].screenX,
-                      y: event.touches[i].screenY});
-
+        touches.push({x: event.touches[i].screenX, y: event.touches[i].screenY})
       }
-      this.touches = touches;
-      event.preventDefault();
+      this.touches = touches
+      event.preventDefault()
     },
     onTap: function (event) {
       console.log(['onTap', event])
@@ -124,7 +120,15 @@ export default {
     onMouseWheel: function (event) {
       console.log(['onMouseWheel', event])
       event.preventDefault()
+    },
+    onResize: function () {
+      this.frame_height = window.innerHeight
+      this.frame_width = window.innerWidth
+      console.log([this.frame_width, this.frame_height])
     }
+  },
+  mounted: function () {
+    window.addEventListener('resize', this.onResize)
   }
 }
 </script>
