@@ -20,6 +20,11 @@
                          v-bind:last_key="last_key"
                          v-bind:frame_number="frame_number"></debug-component>
         <cursor-component v-bind:transform="transform"></cursor-component>
+        <touch-component v-for="(touch, index) in touches"
+                         v-bind:touch_x="touch.x"
+                         v-bind:touch_y="touch.y"
+                         v-bind:index="index"
+                         v-bind:key="touch.i"></touch-component>
     </svg>
   </div>
 </template>
@@ -27,11 +32,13 @@
 <script>
 import DebugComponent from './DebugComponent'
 import CursorComponent from './CursorComponent'
+import TouchComponent from './TouchComponent'
 export default {
   name: 'HelloWorld',
   components: {
     DebugComponent,
-    CursorComponent
+    CursorComponent,
+    TouchComponent
   },
   data: function () {
     return {
@@ -93,7 +100,7 @@ export default {
         this.update_cursor()
       }
       for (i = 0; i < event.touches.length; i++) {
-        touches.push({x: event.touches[i].screenX, y: event.touches[i].screenY})
+        touches.push({x: event.touches[i].screenX, y: event.touches[i].screenY, i: i})
       }
       this.touches = touches
       event.preventDefault()
@@ -112,7 +119,7 @@ export default {
         this.update_cursor()
       }
       for (i = 0; i < event.touches.length; i++) {
-        touches.push({x: event.touches[i].screenX, y: event.touches[i].screenY})
+        touches.push({x: event.touches[i].screenX, y: event.touches[i].screenY, i: i})
       }
       this.touches = touches
       event.preventDefault()
