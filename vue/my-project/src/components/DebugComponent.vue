@@ -5,7 +5,7 @@
 </template>
 <script>
 export default {
-  name: 'Debug',
+  name: 'DebugComponent',
   props: ['cursor_pos_x', 'cursor_pos_y']
 }
 </script>

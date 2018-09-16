@@ -6,7 +6,7 @@
 </template>
 <script>
 export default {
-  name: 'Cursor',
+  name: 'CursorComponent',
   props: ['transform']
 }
 </script>

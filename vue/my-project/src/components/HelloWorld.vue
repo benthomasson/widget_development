@@ -23,8 +23,8 @@
 </template>
 
 <script>
-import DebugComponent from './Debug'
-import CursorComponent from './Cursor'
+import DebugComponent from './DebugComponent'
+import CursorComponent from './CursorComponent'
 export default {
   name: 'HelloWorld',
   components: {
@@ -36,21 +36,27 @@ export default {
       transform: 'translate(100,100)',
       cursor_pos_x: {},
       cursor_pos_y: {},
+      touches: [],
       frame_height: window.innerHeight,
       frame_width: window.innerWidth
     }
   },
   methods: {
+    update_cursor: function () {
+      this.transform = 'translate(' + this.cursor_pos_x + ',' + this.cursor_pos_y + ')'
+    },
     onMouseDown: function (event) {
       console.log(['onMouseDown', event])
       this.cursor_pos_x = event.x
       this.cursor_pos_y = event.y
+      this.update_cursor()
       event.preventDefault()
     },
     onMouseUp: function (event) {
       console.log(['onMouseUp', event])
       this.cursor_pos_x = event.x
       this.cursor_pos_y = event.y
+      this.update_cursor()
       event.preventDefault()
     },
     onMouseEnter: function (event) {
@@ -66,7 +72,7 @@ export default {
       console.log(this)
       this.cursor_pos_x = event.x
       this.cursor_pos_y = event.y
-      this.transform = 'translate(' + this.cursor_pos_x + ',' + this.cursor_pos_y + ')'
+      this.update_cursor()
       event.preventDefault()
     },
     onMouseOver: function (event) {
@@ -75,7 +81,20 @@ export default {
     },
     onTouchStart: function (event) {
       console.log(['onTouchStart', event])
-      event.preventDefault()
+      var touches = [];
+      var i = 0;
+      if (event.touches.length === 1) {
+        this.cursor_pos_x = event.touches[0].screenX;
+        this.cursor_pos_y = event.touches[0].screenY;
+        this.update_cursor()
+      }
+      for (i = 0; i < event.touches.length; i++) {
+        touches.push({x: event.touches[i].screenX,
+                      y: event.touches[i].screenY});
+
+      }
+      this.touches = touches;
+      event.preventDefault();
     },
     onTouchEnd: function (event) {
       console.log(['onTouchEnd', event])
@@ -83,7 +102,20 @@ export default {
     },
     onTouchMove: function (event) {
       console.log(['onTouchMove', event])
-      event.preventDefault()
+      var touches = [];
+      var i = 0;
+      if (event.touches.length === 1) {
+        this.cursor_pos_x = event.touches[0].screenX;
+        this.cursor_pos_y = event.touches[0].screenY;
+        this.update_cursor()
+      }
+      for (i = 0; i < event.touches.length; i++) {
+        touches.push({x: event.touches[i].screenX,
+                      y: event.touches[i].screenY});
+
+      }
+      this.touches = touches;
+      event.preventDefault();
     },
     onTap: function (event) {
       console.log(['onTap', event])
