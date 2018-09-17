@@ -30,9 +30,11 @@
 </template>
 
 <script>
-import DebugComponent from './DebugComponent'
-import CursorComponent from './CursorComponent'
-import TouchComponent from './TouchComponent'
+import DebugComponent from '@/components/DebugComponent'
+import CursorComponent from '@/components/CursorComponent'
+import TouchComponent from '@/components/TouchComponent'
+import fsm from '@/fsm'
+import util from '@/util'
 export default {
   name: 'HelloWorld',
   components: {
@@ -147,12 +149,18 @@ export default {
       setInterval(function () {
         self.frame_number = Math.floor(window.performance.now())
       }, 17)
+    },
+    init: function () {
     }
   },
   mounted: function () {
     window.addEventListener('resize', this.onResize)
     document.addEventListener('keydown', this.onKeyDown)
     this.startInterval()
+    this.init()
+  },
+  beforeDestroy: function () {
+    console.log('beforeDestroy')
   }
 }
 </script>
