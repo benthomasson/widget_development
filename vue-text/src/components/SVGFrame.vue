@@ -25,6 +25,7 @@
                          v-bind:touch_y="touch.y"
                          v-bind:index="index"
                          v-bind:key="touch.i"></touch-component>
+        <text-input-component v-bind:transform="input_transform"></text-input-component>
     </svg>
   </div>
 </template>
@@ -33,18 +34,21 @@
 import DebugComponent from '@/components/DebugComponent'
 import CursorComponent from '@/components/CursorComponent'
 import TouchComponent from '@/components/TouchComponent'
-import fsm from '@/fsm'
-import util from '@/util'
+import TextInputComponent from '@/components/TextInputComponent'
+// import fsm from '@/fsm'
+// import util from '@/util'
 export default {
   name: 'SVGFrame',
   components: {
     DebugComponent,
     CursorComponent,
-    TouchComponent
+    TouchComponent,
+    TextInputComponent
   },
   data: function () {
     return {
       transform: 'translate(100,100)',
+      input_transform: 'translate(100,120)',
       cursor_pos_x: {},
       cursor_pos_y: {},
       touches: [],
