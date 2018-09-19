@@ -11,13 +11,15 @@ class SVGFrame extends Component {
       cursorPosY: 0,
       lastKey: '',
       frameNumber: 0,
-      cursorTransform: ''
+      cursorTransform: '',
+      showDebug: true
     };
 
     this.onMouseMove = this.onMouseMove.bind(this);
     this.onMouseWheel = this.onMouseWheel.bind(this);
     this.timer = this.timer.bind(this);
     this.onKeyDown = this.onKeyDown.bind(this);
+    this.onResize = this.onResize.bind(this);
   }
 
   onMouseMove(e) {
@@ -39,6 +41,12 @@ class SVGFrame extends Component {
       lastKey: e.key
     });
 
+    if (e.key === 'd') {
+      this.setState({
+        showDebug: !this.state.showDebug
+      });
+    }
+
     e.preventDefault();
   }
 
@@ -48,11 +56,22 @@ class SVGFrame extends Component {
     });
   }
 
+  onResize(e) {
+     this.setState({
+       frameWidth: window.innerWidth,
+       frameHeight: window.innerHeight
+     });
+  }
+
   componentDidMount() {
      var intervalId = setInterval(this.timer, 17);
-     // store intervalId in the state so it can be accessed later:
-     this.setState({intervalId: intervalId});
+     this.setState({
+       intervalId: intervalId,
+       frameWidth: window.innerWidth,
+       frameHeight: window.innerHeight
+     });
      document.addEventListener('keydown', this.onKeyDown);
+     window.addEventListener('resize', this.onResize)
   }
 
   render() {
@@ -60,13 +79,11 @@ class SVGFrame extends Component {
       backgroundColor: '#ffffff',
       cursor: 'none'
     };
-    var frameWidth = window.innerWidth;
-    var frameHeight = window.innerHeight;
     return (
       <div className="SVGFrame">
         <svg id="frame" style={frameStyle}
-        height={frameHeight}
-        width={frameWidth}
+        height={this.state.frameHeight}
+        width={this.state.frameWidth}
         onMouseMove={this.onMouseMove}
         onMouseDown={this.onMouseMove}
         onMouseUp={this.onMouseMove}
@@ -74,10 +91,7 @@ class SVGFrame extends Component {
         onMouseLeave={this.onMouseMove}
         onWheel={this.onMouseWheel}
         >
-          <Debug frameNumber={this.state.frameNumber}
-                 lastKey={this.state.lastKey}
-                 cursorPosX={this.state.cursorPosX}
-                 cursorPosY={this.state.cursorPosY}/>
+          <Debug {...this.state} />
           <Cursor transform={this.state.cursorTransform} />
         </svg>
       </div>
