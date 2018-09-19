@@ -1,6 +1,7 @@
 import React, { Component } from 'react';
 import Debug from './Debug'
 import Cursor from './Cursor'
+import fsm from './fsm'
 
 class SVGFrame extends Component {
 
