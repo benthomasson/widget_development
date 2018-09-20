@@ -3,6 +3,8 @@ import Debug from './Debug'
 import Cursor from './Cursor'
 import TextInput from './TextInput'
 import fsm from './fsm'
+import models from './models'
+import util from './util'
 
 class SVGFrame extends Component {
 
@@ -14,14 +16,29 @@ class SVGFrame extends Component {
       lastKey: '',
       frameNumber: 0,
       cursorTransform: '',
-      showDebug: true
+      showDebug: true,
     };
 
+    this.trace_order_seq = util.natural_numbers(0);
+
+    this.future_messages = [];
+
+    this.text = new models.TextInput(1, "Hello World", this, this);
+
+    this.first_channel = new fsm.Channel(null,
+                                         this.text.fsm,
+                                         this);
+
     this.onMouseMove = this.onMouseMove.bind(this);
+    this.onMouseDown = this.onMouseDown.bind(this);
     this.onMouseWheel = this.onMouseWheel.bind(this);
     this.timer = this.timer.bind(this);
     this.onKeyDown = this.onKeyDown.bind(this);
     this.onResize = this.onResize.bind(this);
+  }
+
+  send_trace_message (message) {
+    console.log(message);
   }
 
   onMouseMove(e) {
@@ -34,11 +51,23 @@ class SVGFrame extends Component {
     e.preventDefault();
   }
 
+  onMouseDown(e) {
+    this.setState({
+      cursorPosX: e.pageX,
+      cursorPosY: e.pageY,
+      cursorTransform: 'translate(' + e.pageX + ',' + e.pageY + ')'
+    });
+    this.first_channel.send('MouseDown', e);
+
+    e.preventDefault();
+  }
+
   onMouseWheel(e) {
     e.preventDefault();
   }
 
   onKeyDown(e) {
+    this.first_channel.send('KeyDown', e);
     this.setState({
       lastKey: e.key
     });
@@ -66,9 +95,9 @@ class SVGFrame extends Component {
   }
 
   componentDidMount() {
-     var intervalId = setInterval(this.timer, 17);
+     //var intervalId = setInterval(this.timer, 17);
      this.setState({
-       intervalId: intervalId,
+     //  intervalId: intervalId,
        frameWidth: window.innerWidth,
        frameHeight: window.innerHeight
      });
@@ -87,7 +116,7 @@ class SVGFrame extends Component {
         height={this.state.frameHeight}
         width={this.state.frameWidth}
         onMouseMove={this.onMouseMove}
-        onMouseDown={this.onMouseMove}
+        onMouseDown={this.onMouseDown}
         onMouseUp={this.onMouseMove}
         onMouseEnter={this.onMouseMove}
         onMouseLeave={this.onMouseMove}
@@ -95,7 +124,7 @@ class SVGFrame extends Component {
         >
           <Debug {...this.state} />
           <Cursor transform={this.state.cursorTransform} />
-          <TextInput />
+          <TextInput {...this.text}/>
         </svg>
       </div>
     );
