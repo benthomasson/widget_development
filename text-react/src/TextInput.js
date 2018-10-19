@@ -49,19 +49,19 @@ class TextInput extends Component {
     return (
       <g transform={this.state.transform}>
           <rect x='0' y='0'
-                width={this.state.text_width} height='20'
+                width={this.props.width} height='20'
                 style={textInputBoxStyle}
                 rx='2'>
           </rect>
       {this.props.selected ?
         <g>
           <rect x='0' y='0'
-                width={this.state.text_width} height='20'
+                width={this.props.width} height='20'
                 style={selected2Style}
                 rx='4'>
           </rect>
           <rect x='0' y='0'
-                width={this.state.text_width} height='20'
+                width={this.props.width} height='20'
                 style={selected1Style}
                 rx='4'>
           </rect>

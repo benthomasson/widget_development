@@ -43,13 +43,13 @@ _Start.prototype.start.transitions = ['Ready'];
 _Edit.prototype.start = function (controller) {
     controller.scope.edit = true;
     controller.scope.selected = true;
-    controller.scope.cursor = true;
+    controller.scope.show_cursor = true;
 };
 
 _Edit.prototype.end = function (controller) {
     controller.scope.edit = false;
     controller.scope.selected = false;
-    controller.scope.cursor = false;
+    controller.scope.show_cursor = false;
 };
 
 
@@ -113,20 +113,19 @@ _TextSelected.prototype.start = function (controller) {
     controller.scope.edit = true;
     controller.scope.selected = true;
     controller.scope.text_selected = true;
-    controller.scope.cursor = false;
+    controller.scope.show_cursor = false;
 };
 
 _TextSelected.prototype.end = function (controller) {
     controller.scope.edit = false;
     controller.scope.selected = false;
     controller.scope.text_selected = false;
-    controller.scope.cursor = false;
+    controller.scope.show_cursor = false;
 };
 
 _TextSelected.prototype.onMouseDown = function (controller) {
 
     controller.changeState(Edit);
-
 };
 _TextSelected.prototype.onMouseDown.transitions = ['Edit'];
 

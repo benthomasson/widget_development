@@ -25,6 +25,8 @@ class SVGFrame extends Component {
 
     this.text = new models.TextInput(1, "Hello World", this, this);
 
+    window.scope = this.text;
+
     this.first_channel = new fsm.Channel(null,
                                          this.text.fsm,
                                          this);
@@ -85,6 +87,13 @@ class SVGFrame extends Component {
     this.setState({
       frameNumber: this.state.frameNumber + 1
     });
+    if (this.future_messages.length !== 0) {
+      for (var i = 0; i < this.future_messages.length; i++) {
+        this.first_channel.send(this.future_messages[i][0],
+                                this.future_messages[i][1]);
+      }
+      this.future_messages = [];
+    };
   }
 
   onResize(e) {
@@ -95,9 +104,9 @@ class SVGFrame extends Component {
   }
 
   componentDidMount() {
-     //var intervalId = setInterval(this.timer, 17);
+     var intervalId = setInterval(this.timer, 17);
      this.setState({
-     //  intervalId: intervalId,
+       intervalId: intervalId,
        frameWidth: window.innerWidth,
        frameHeight: window.innerHeight
      });
